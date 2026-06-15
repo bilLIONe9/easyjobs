@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Star, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
@@ -104,32 +105,291 @@ function ProfileDialog({ editProfile, onClose }: { editProfile?: any; onClose: (
 
 // ─── Resume Drafts Dialog ─────────────────────────────────────────────────────
 
+function CvContactInfoEditor({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+  const field = (key: string) => ({
+    value: value[key] ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [key]: e.target.value }),
+  })
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact Info</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-8" placeholder="First name" {...field('firstName')} />
+        <Input className="text-xs h-8" placeholder="Last name" {...field('lastName')} />
+      </div>
+      <Input className="text-xs h-8" placeholder="Headline / Job title" {...field('headline')} />
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-8" placeholder="Email" {...field('email')} />
+        <Input className="text-xs h-8" placeholder="Phone" {...field('phone')} />
+      </div>
+      <Input className="text-xs h-8" placeholder="Address (optional)" {...field('address')} />
+    </div>
+  )
+}
+
+function CvWorkExperienceItem({
+  value,
+  onChange,
+  onRemove,
+}: {
+  value: any
+  onChange: (v: any) => void
+  onRemove: () => void
+}) {
+  const field = (key: string) => ({
+    value: value[key] ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      onChange({ ...value, [key]: e.target.value }),
+  })
+  return (
+    <div className="rounded border p-2.5 space-y-2 bg-background">
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-7" placeholder="Company" {...field('company')} />
+        <Input className="text-xs h-7" placeholder="Job title" {...field('jobTitle')} />
+      </div>
+      <Input className="text-xs h-7" placeholder="Location (optional)" {...field('location')} />
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-7" placeholder="Start (e.g. Jan 2020)" {...field('startDate')} />
+        <Input className="text-xs h-7" placeholder="End (or Present)" {...field('endDate')} />
+      </div>
+      <Textarea className="text-xs" rows={3} placeholder="Description / achievements..." {...field('description')} />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive h-7 px-2 text-xs gap-1"
+        onClick={onRemove}
+      >
+        <Trash2 className="h-3 w-3" /> Remove
+      </Button>
+    </div>
+  )
+}
+
+function CvEducationItem({
+  value,
+  onChange,
+  onRemove,
+}: {
+  value: any
+  onChange: (v: any) => void
+  onRemove: () => void
+}) {
+  const field = (key: string) => ({
+    value: value[key] ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [key]: e.target.value }),
+  })
+  return (
+    <div className="rounded border p-2.5 space-y-2 bg-background">
+      <Input className="text-xs h-7" placeholder="Institution" {...field('institution')} />
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-7" placeholder="Degree" {...field('degree')} />
+        <Input className="text-xs h-7" placeholder="Field of study" {...field('fieldOfStudy')} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Input className="text-xs h-7" placeholder="Start year" {...field('startDate')} />
+        <Input className="text-xs h-7" placeholder="End year (optional)" {...field('endDate')} />
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-destructive hover:text-destructive h-7 px-2 text-xs gap-1"
+        onClick={onRemove}
+      >
+        <Trash2 className="h-3 w-3" /> Remove
+      </Button>
+    </div>
+  )
+}
+
+function CvSectionEditor({
+  section,
+  onChange,
+  onRemove,
+}: {
+  section: any
+  onChange: (v: any) => void
+  onRemove: () => void
+}) {
+  const updateTitle = (e: React.ChangeEvent<HTMLInputElement>) =>
+    onChange({ ...section, sectionTitle: e.target.value })
+  const updateContent = (e: React.ChangeEvent<HTMLTextAreaElement>) =>
+    onChange({ ...section, content: e.target.value })
+
+  const addWorkExp = () =>
+    onChange({ ...section, workExperiences: [...(section.workExperiences ?? []), {}] })
+  const updateWorkExp = (i: number, v: any) => {
+    const arr = [...(section.workExperiences ?? [])]
+    arr[i] = v
+    onChange({ ...section, workExperiences: arr })
+  }
+  const removeWorkExp = (i: number) => {
+    const arr = [...(section.workExperiences ?? [])]
+    arr.splice(i, 1)
+    onChange({ ...section, workExperiences: arr })
+  }
+
+  const addEducation = () =>
+    onChange({ ...section, educations: [...(section.educations ?? []), {}] })
+  const updateEducation = (i: number, v: any) => {
+    const arr = [...(section.educations ?? [])]
+    arr[i] = v
+    onChange({ ...section, educations: arr })
+  }
+  const removeEducation = (i: number) => {
+    const arr = [...(section.educations ?? [])]
+    arr.splice(i, 1)
+    onChange({ ...section, educations: arr })
+  }
+
+  return (
+    <div className="rounded border bg-muted/30 p-3 space-y-2">
+      <div className="flex items-center gap-2">
+        <Input
+          className="text-xs h-7 font-medium flex-1"
+          value={section.sectionTitle ?? ''}
+          onChange={updateTitle}
+          placeholder="Section title"
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+          onClick={onRemove}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {(section.sectionType === 'summary' || section.sectionType === 'skills' || section.sectionType === 'other') && (
+        <Textarea
+          className="text-xs"
+          rows={section.sectionType === 'summary' ? 4 : 3}
+          value={section.content ?? ''}
+          onChange={updateContent}
+          placeholder={
+            section.sectionType === 'summary'
+              ? 'Professional summary...'
+              : section.sectionType === 'skills'
+              ? 'e.g. JavaScript, TypeScript, React, Node.js...'
+              : 'Content...'
+          }
+        />
+      )}
+
+      {section.sectionType === 'experience' && (
+        <div className="space-y-2">
+          {(section.workExperiences ?? []).map((exp: any, i: number) => (
+            <CvWorkExperienceItem
+              key={i}
+              value={exp}
+              onChange={(v) => updateWorkExp(i, v)}
+              onRemove={() => removeWorkExp(i)}
+            />
+          ))}
+          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs w-full" onClick={addWorkExp}>
+            <Plus className="h-3 w-3" /> Add Experience
+          </Button>
+        </div>
+      )}
+
+      {section.sectionType === 'education' && (
+        <div className="space-y-2">
+          {(section.educations ?? []).map((edu: any, i: number) => (
+            <CvEducationItem
+              key={i}
+              value={edu}
+              onChange={(v) => updateEducation(i, v)}
+              onRemove={() => removeEducation(i)}
+            />
+          ))}
+          <Button variant="outline" size="sm" className="gap-1 h-7 text-xs w-full" onClick={addEducation}>
+            <Plus className="h-3 w-3" /> Add Education
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const CV_SECTION_TYPES = [
+  { type: 'summary', title: 'Professional Summary' },
+  { type: 'experience', title: 'Work Experience' },
+  { type: 'education', title: 'Education' },
+  { type: 'skills', title: 'Skills' },
+  { type: 'other', title: 'Custom Section' },
+]
+
+function CvDataEditor({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+  const ci = value.contactInfo ?? {}
+  const sections: any[] = value.sections ?? []
+
+  const updateContactInfo = (newCi: any) => onChange({ ...value, contactInfo: newCi })
+  const updateSection = (i: number, s: any) => {
+    const arr = [...sections]
+    arr[i] = s
+    onChange({ ...value, sections: arr })
+  }
+  const removeSection = (i: number) => {
+    const arr = [...sections]
+    arr.splice(i, 1)
+    onChange({ ...value, sections: arr })
+  }
+  const addSection = (type: string, title: string) => {
+    const s: any = { sectionType: type, sectionTitle: title }
+    if (type === 'experience') s.workExperiences = []
+    else if (type === 'education') s.educations = []
+    else s.content = ''
+    onChange({ ...value, sections: [...sections, s] })
+  }
+
+  return (
+    <div className="space-y-4">
+      <CvContactInfoEditor value={ci} onChange={updateContactInfo} />
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sections</p>
+        {sections.map((section: any, i: number) => (
+          <CvSectionEditor
+            key={i}
+            section={section}
+            onChange={(s) => updateSection(i, s)}
+            onRemove={() => removeSection(i)}
+          />
+        ))}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-1 text-xs w-full">
+              <Plus className="h-3.5 w-3.5" />
+              Add Section
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {CV_SECTION_TYPES.map(({ type, title }) => (
+              <DropdownMenuItem key={type} className="text-xs" onClick={() => addSection(type, title)}>
+                {title}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  )
+}
+
 function ResumeDraftEditor({
   draft,
   onSave,
   onCancel,
 }: {
   draft?: any
-  onSave: (title: string, cvData: string) => void
+  onSave: (title: string, cvData: any) => void
   onCancel: () => void
 }) {
   const [title, setTitle] = useState(draft?.title ?? '')
-  const [json, setJson] = useState(draft?.cvData ? JSON.stringify(draft.cvData, null, 2) : '')
-  const [jsonError, setJsonError] = useState<string | null>(null)
-
-  const handleSave = () => {
-    setJsonError(null)
-    if (!title.trim()) return
-    if (json.trim()) {
-      try {
-        JSON.parse(json)
-      } catch {
-        setJsonError('Invalid JSON — please fix before saving.')
-        return
-      }
-    }
-    onSave(title.trim(), json.trim())
-  }
+  const [cvData, setCvData] = useState<any>(
+    draft?.cvData && Object.keys(draft.cvData).length
+      ? draft.cvData
+      : { contactInfo: {}, sections: [] }
+  )
 
   return (
     <div className="space-y-3">
@@ -142,20 +402,10 @@ function ResumeDraftEditor({
           placeholder="e.g. Backend Engineer v1"
         />
       </div>
-      <div className="grid gap-1.5">
-        <Label className="text-xs">CV Data (JSON)</Label>
-        <Textarea
-          value={json}
-          onChange={(e) => { setJson(e.target.value); setJsonError(null) }}
-          rows={16}
-          className="font-mono text-xs"
-          placeholder={'{\n  "contactInfo": {},\n  "summary": "",\n  "workExperiences": [],\n  "skills": []\n}'}
-        />
-        {jsonError && <p className="text-xs text-destructive">{jsonError}</p>}
-      </div>
+      <CvDataEditor value={cvData} onChange={setCvData} />
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-        <Button size="sm" disabled={!title.trim()} onClick={handleSave}>
+        <Button size="sm" disabled={!title.trim()} onClick={() => onSave(title.trim(), cvData)}>
           {draft ? 'Update Draft' : 'Create Draft'}
         </Button>
       </div>
@@ -187,14 +437,12 @@ function ResumeDraftsDialog({
   const [updateDraft] = useMutation(UPDATE_PROFILE_RESUME_DRAFT, { refetchQueries: [draftsQuery] })
   const [deleteDraft] = useMutation(DELETE_PROFILE_RESUME_DRAFT, { refetchQueries: [draftsQuery, JOB_PROFILES_QUERY] })
 
-  const handleCreate = async (title: string, cvDataStr: string) => {
-    const cvData = cvDataStr ? JSON.parse(cvDataStr) : {}
+  const handleCreate = async (title: string, cvData: any) => {
     await createDraft({ variables: { profileId: profile.id, title, cvData } })
     setCreatingNew(false)
   }
 
-  const handleUpdate = async (title: string, cvDataStr: string) => {
-    const cvData = cvDataStr ? JSON.parse(cvDataStr) : {}
+  const handleUpdate = async (title: string, cvData: any) => {
     await updateDraft({ variables: { id: editingDraft.id, title, cvData } })
     setEditingDraft(null)
   }

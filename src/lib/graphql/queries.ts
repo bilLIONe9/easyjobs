@@ -286,6 +286,15 @@ export const DELETE_APPLICATION_QUESTION = gql`
   }
 `
 
+export const GENERATE_CV = gql`
+  mutation GenerateCV($applicationId: ID!) {
+    generateCV(applicationId: $applicationId) {
+      id
+      cvGenerationStatus
+    }
+  }
+`
+
 // ─── Job Profiles ─────────────────────────────────────────────────────────────
 
 export const JOB_PROFILES_QUERY = gql`

@@ -1,5 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
+import { useMutation } from '@apollo/client/react'
 import { Sparkles, Loader2, CheckCircle2, XCircle, ChevronDown, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { GENERATE_CV, JOB_APPLICATION_QUERY } from '@/lib/graphql/queries'
 
 interface CVActionButtonProps {
   applicationId: string
@@ -20,7 +22,12 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
   const router = useRouter()
   const goToEditCv = () => router.push(`/dashboard/applications/${applicationId}/edit-cv`)
 
-  if (initialStatus === 'pending' || initialStatus === 'generating') {
+  const [generateCV, { loading: generating }] = useMutation(GENERATE_CV, {
+    variables: { applicationId },
+    refetchQueries: [{ query: JOB_APPLICATION_QUERY, variables: { id: applicationId } }],
+  })
+
+  if (initialStatus === 'pending' || initialStatus === 'generating' || initialStatus === 'queued') {
     return (
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -49,12 +56,12 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                <ChevronDown className="h-4 w-4" />
+              <Button variant="ghost" size="sm" disabled={generating}>
+                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {}}>
+              <DropdownMenuItem onClick={() => generateCV()}>
                 <Sparkles className="h-4 w-4 mr-2" />
                 Regenerate with AI
               </DropdownMenuItem>
@@ -74,9 +81,10 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
             variant="outline"
             size="sm"
             className="gap-1.5 text-destructive border-destructive hover:bg-destructive/10"
-            onClick={() => {}}
+            disabled={generating}
+            onClick={() => generateCV()}
           >
-            <XCircle className="h-4 w-4" />
+            {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-4 w-4" />}
             Retry AI Generation
           </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={goToEditCv}>
@@ -91,14 +99,14 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          <Sparkles className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="gap-1.5" disabled={generating}>
+          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           Create CV
           <ChevronDown className="h-3.5 w-3.5" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        <DropdownMenuItem onClick={() => {}}>
+        <DropdownMenuItem onClick={() => generateCV()}>
           <Sparkles className="h-4 w-4 mr-2" />
           Generate with AI
         </DropdownMenuItem>
