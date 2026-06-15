@@ -17,10 +17,13 @@ export const jobApplicationResolvers = {
 
       const where: any = { userId }
       if (filter?.status) where.currentStatus = filter.status
-      if (filter?.profileId) where.jobProfileId = filter.profileId
+      if (filter?.profileIds?.length) {
+        where.jobProfileId = { in: filter.profileIds }
+      } else if (filter?.profileId) {
+        where.jobProfileId = filter.profileId
+      }
       if (filter?.cvReady === true) where.cvGenerationStatus = 'done'
-      if (filter?.startDate) where.createdAt = { ...where.createdAt, gte: new Date(filter.startDate) }
-      if (filter?.endDate) where.createdAt = { ...where.createdAt, lte: new Date(filter.endDate) }
+      if (filter?.startDate) where.createdAt = { gte: new Date(filter.startDate) }
       if (filter?.search) {
         where.jobPost = { title: { contains: filter.search, mode: 'insensitive' } }
       }

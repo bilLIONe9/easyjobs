@@ -97,9 +97,9 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
   input ApplicationFilter {
     status: String
     profileId: ID
+    profileIds: [ID]
     cvReady: Boolean
     startDate: String
-    endDate: String
     search: String
   }
 

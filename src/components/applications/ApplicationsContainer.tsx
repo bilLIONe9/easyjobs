@@ -3,13 +3,18 @@ import { useState } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Search, MapPin, CheckCircle2, Loader2 } from 'lucide-react'
+import { Search, MapPin, CheckCircle2, Loader2, ChevronsUpDown, Check, CalendarIcon, X } from 'lucide-react'
+
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { JOB_APPLICATIONS_QUERY, UPDATE_APPLICATION_STATUS, DELETE_APPLICATION } from '@/lib/graphql/queries'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Calendar } from '@/components/ui/calendar'
+import { cn } from '@/lib/utils'
+import { JOB_APPLICATIONS_QUERY, JOB_PROFILES_QUERY, UPDATE_APPLICATION_STATUS, DELETE_APPLICATION } from '@/lib/graphql/queries'
 
 const APPLICATION_STATUSES = [
   'saved', 'applied', 'phone_screen', 'interview', 'technical_test', 'offer', 'rejected', 'withdrawn',
@@ -32,8 +37,50 @@ const CV_STATUS_ICONS: Record<string, React.ReactNode> = {
   pending: <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />,
 }
 
+const DATE_PRESETS = [
+  { value: '1d', label: '1 day' },
+  { value: '3d', label: '3 days' },
+  { value: '1w', label: '1 week' },
+] as const
+
+type DatePreset = typeof DATE_PRESETS[number]['value'] | 'custom' | null
+
 function formatLabel(s: string) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+// Fixed GMT-8 offset. Change APP_TZ_OFFSET_HOURS to adjust the system timezone.
+const APP_TZ_OFFSET_HOURS = 8
+const APP_TZ_OFFSET_MS = APP_TZ_OFFSET_HOURS * 60 * 60 * 1000
+
+// Returns UTC equivalent of midnight on (today - daysAgo) in the app timezone.
+// e.g. daysAgo=1 → 00:00:00 yesterday GMT-8 expressed as UTC
+function appTZMidnightDaysAgo(daysAgo: number): Date {
+  const now = new Date()
+  // Shift current UTC time to get "local clock" in app TZ
+  const localNow = new Date(now.getTime() - APP_TZ_OFFSET_MS)
+  // Zero to midnight of that local day
+  localNow.setUTCHours(0, 0, 0, 0)
+  // Step back N days
+  localNow.setUTCDate(localNow.getUTCDate() - daysAgo)
+  // Shift back to true UTC
+  return new Date(localNow.getTime() + APP_TZ_OFFSET_MS)
+}
+
+// Returns UTC equivalent of midnight on the calendar-selected date in the app timezone.
+// Calendar gives a local-timezone Date; we care only about its y/m/d.
+function appTZStartOfCalendarDay(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), APP_TZ_OFFSET_HOURS, 0, 0, 0))
+}
+
+function getDateRangeFromPreset(preset: DatePreset, customStart: Date | undefined): { startDate?: string } {
+  if (preset === '1d') return { startDate: appTZMidnightDaysAgo(1).toISOString() }
+  if (preset === '3d') return { startDate: appTZMidnightDaysAgo(3).toISOString() }
+  if (preset === '1w') return { startDate: appTZMidnightDaysAgo(7).toISOString() }
+  if (preset === 'custom') {
+    return customStart ? { startDate: appTZStartOfCalendarDay(customStart).toISOString() } : {}
+  }
+  return {}
 }
 
 export function ApplicationsContainer() {
@@ -42,10 +89,26 @@ export function ApplicationsContainer() {
   const [cvReady, setCvReady] = useState(false)
   const [page, setPage] = useState(1)
 
+  // Profile multi-select
+  const [profileIds, setProfileIds] = useState<string[]>([])
+  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
+
+  // Date range
+  const [datePreset, setDatePreset] = useState<DatePreset>(null)
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined)
+  const [datePopoverOpen, setDatePopoverOpen] = useState(false)
+
+  const { data: profilesData } = useQuery(JOB_PROFILES_QUERY)
+  const profiles: Array<{ id: string; name: string }> = profilesData?.jobProfiles ?? []
+
+  const dateRangeFilter = getDateRangeFromPreset(datePreset, customStartDate)
+
   const filter = {
     ...(search ? { search } : {}),
     ...(status !== 'all' ? { status } : {}),
     ...(cvReady ? { cvReady: true } : {}),
+    ...(profileIds.length ? { profileIds } : {}),
+    ...dateRangeFilter,
   }
 
   const { data, loading } = useQuery(JOB_APPLICATIONS_QUERY, {
@@ -64,6 +127,42 @@ export function ApplicationsContainer() {
   const totalPages = (data as any)?.jobApplications?.totalPages ?? 1
   const total = (data as any)?.jobApplications?.total ?? 0
 
+  function toggleProfile(id: string) {
+    setProfileIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    )
+    setPage(1)
+  }
+
+  function handlePresetClick(preset: DatePreset) {
+    if (datePreset === preset) {
+      setDatePreset(null)
+    } else {
+      setDatePreset(preset)
+      setCustomStartDate(undefined)
+    }
+    setPage(1)
+  }
+
+  function handleCustomRangeSelect(date: Date | undefined) {
+    setCustomStartDate(date)
+    setDatePreset('custom')
+    setPage(1)
+  }
+
+  function clearDateFilter() {
+    setDatePreset(null)
+    setCustomStartDate(undefined)
+    setPage(1)
+  }
+
+  const dateLabel = (() => {
+    if (!datePreset) return null
+    if (datePreset !== 'custom') return DATE_PRESETS.find((p) => p.value === datePreset)?.label
+    if (customStartDate) return `From ${format(customStartDate, 'MMM d')}`
+    return 'Custom'
+  })()
+
   return (
     <div className="col-span-3 space-y-4">
       <div className="flex items-center justify-between">
@@ -75,6 +174,7 @@ export function ApplicationsContainer() {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
+        {/* Search */}
         <div className="relative flex-1 min-w-48 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -84,6 +184,8 @@ export function ApplicationsContainer() {
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
+
+        {/* Status */}
         <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1) }}>
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
@@ -95,10 +197,117 @@ export function ApplicationsContainer() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Profile multi-select */}
+        {profiles.length > 0 && (
+          <Popover open={profilePopoverOpen} onOpenChange={setProfilePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={profileIds.length ? 'secondary' : 'outline'}
+                size="sm"
+                className="gap-1.5 h-9"
+                role="combobox"
+              >
+                {profileIds.length
+                  ? `${profileIds.length} profile${profileIds.length > 1 ? 's' : ''}`
+                  : 'All profiles'}
+                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-52 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search profiles..." />
+                <CommandList>
+                  <CommandEmpty>No profiles found.</CommandEmpty>
+                  <CommandGroup>
+                    {profiles.map((profile) => (
+                      <CommandItem
+                        key={profile.id}
+                        value={profile.name}
+                        onSelect={() => toggleProfile(profile.id)}
+                      >
+                        <Check
+                          className={cn(
+                            'mr-2 h-4 w-4',
+                            profileIds.includes(profile.id) ? 'opacity-100' : 'opacity-0',
+                          )}
+                        />
+                        {profile.name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+              {profileIds.length > 0 && (
+                <div className="border-t p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs text-muted-foreground"
+                    onClick={() => { setProfileIds([]); setPage(1) }}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
+
+        {/* Date presets */}
+        <div className="flex items-center gap-1">
+          {DATE_PRESETS.map((preset) => (
+            <Button
+              key={preset.value}
+              variant={datePreset === preset.value ? 'secondary' : 'outline'}
+              size="sm"
+              className="h-9 text-xs px-2.5"
+              onClick={() => handlePresetClick(preset.value)}
+            >
+              {preset.label}
+            </Button>
+          ))}
+
+          {/* Custom date range */}
+          <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={datePreset === 'custom' ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-9 gap-1.5 text-xs px-2.5"
+              >
+                <CalendarIcon className="h-3.5 w-3.5" />
+                Custom
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={customStartDate}
+                onSelect={handleCustomRangeSelect}
+                disabled={(date) => date > new Date()}
+              />
+            </PopoverContent>
+          </Popover>
+
+          {/* Clear date filter */}
+          {dateLabel && (
+            <Badge
+              variant="secondary"
+              className="gap-1 text-xs cursor-pointer hover:bg-muted"
+              onClick={clearDateFilter}
+            >
+              {dateLabel}
+              <X className="h-3 w-3" />
+            </Badge>
+          )}
+        </div>
+
+        {/* CV Ready */}
         <Button
           variant={cvReady ? 'secondary' : 'outline'}
           size="sm"
-          className="gap-1.5"
+          className="gap-1.5 h-9"
           onClick={() => { setCvReady((v) => !v); setPage(1) }}
         >
           <CheckCircle2 className="h-3.5 w-3.5" />
