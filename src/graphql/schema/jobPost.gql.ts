@@ -69,6 +69,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     jobPosts(filter: JobPostFilter, page: Int, limit: Int): JobPostPage!
     jobPost(id: ID!): JobPost
     jobPostInsights: JobPostInsights!
+    checkDuplicateJobPosts(title: String!, postedBy: String!, excludeId: ID): [JobPost!]!
   }
 
   extend type Mutation {

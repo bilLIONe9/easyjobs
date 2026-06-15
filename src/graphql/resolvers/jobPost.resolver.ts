@@ -53,6 +53,24 @@ export const jobPostResolvers = {
       return ctx.prisma.jobPost.findFirst({ where: { id: args.id, userId }, include: { applications: true } })
     },
 
+    checkDuplicateJobPosts: async (
+      _: unknown,
+      args: { title: string; postedBy: string; excludeId?: string },
+      ctx: GraphQLContext,
+    ) => {
+      const userId = requireAuth(ctx.userId)
+      return ctx.prisma.jobPost.findMany({
+        where: {
+          userId,
+          title: { contains: args.title, mode: 'insensitive' },
+          postedBy: { contains: args.postedBy, mode: 'insensitive' },
+          ...(args.excludeId ? { id: { not: args.excludeId } } : {}),
+        },
+        orderBy: { postedAt: 'desc' },
+        take: 5,
+      })
+    },
+
     jobPostInsights: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
       const [total, active, closed, inappropriate, savedToApply] = await Promise.all([

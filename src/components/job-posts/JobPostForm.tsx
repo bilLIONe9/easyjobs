@@ -1,6 +1,6 @@
 'use client'
 import { useForm } from 'react-hook-form'
-import { useMutation } from '@apollo/client/react'
+import { useMutation, useLazyQuery } from '@apollo/client/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
@@ -20,10 +20,10 @@ import { getAllCompanies } from '@/actions/company.actions'
 import { getAllJobLocations } from '@/actions/jobLocation.actions'
 import { getJobSourceList } from '@/actions/jobSource.actions'
 import { JOB_TYPES } from '@/models/job.model'
-import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY } from '@/lib/graphql/queries'
+import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, CHECK_DUPLICATE_JOB_POSTS } from '@/lib/graphql/queries'
 import TiptapEditor from '@/components/TiptapEditor'
 import { useRouter } from 'next/navigation'
-import { format } from 'date-fns'
+import { format, formatDistanceToNow } from 'date-fns'
 
 const schema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -141,6 +141,25 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
     return () => { active = false }
   }, [editPost]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [checkDuplicates, { data: duplicateData }] = useLazyQuery<{
+    checkDuplicateJobPosts: { id: string; title: string; postedBy: string; postedAt: string; sourceUrl?: string | null; status: string }[]
+  }>(CHECK_DUPLICATE_JOB_POSTS)
+  const duplicates = duplicateData?.checkDuplicateJobPosts ?? []
+
+  const titleValue = form.watch('title')
+  const companyValue = form.watch('company')
+
+  useEffect(() => {
+    if (!titleValue || titleValue.length < 2 || !companyValue || companies.length === 0) return
+    const companyLabel = companies.find((c) => c.id === companyValue)?.label ?? companyValue
+    const timer = setTimeout(() => {
+      checkDuplicates({
+        variables: { title: titleValue, postedBy: companyLabel, excludeId: editPost?.id ?? undefined },
+      })
+    }, 500)
+    return () => clearTimeout(timer)
+  }, [titleValue, companyValue, companies]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [createPost] = useMutation(CREATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
   const [updatePost] = useMutation(UPDATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
 
@@ -186,6 +205,35 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
             </FormItem>
           )}
         />
+
+        {duplicates.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <p className="text-sm font-semibold text-amber-800">
+              Possible duplicate{duplicates.length > 1 ? 's' : ''} found
+            </p>
+            {duplicates.map((dup) => (
+              <div key={dup.id} className="flex items-start justify-between gap-2 text-sm text-amber-700">
+                <span>
+                  <span className="font-medium">{dup.postedBy}</span> posted &ldquo;{dup.title}&rdquo;{' '}
+                  {formatDistanceToNow(new Date(dup.postedAt), { addSuffix: true })}
+                  {dup.status !== 'active' && (
+                    <span className="ml-1 text-amber-500">({dup.status})</span>
+                  )}
+                </span>
+                {dup.sourceUrl && (
+                  <a
+                    href={dup.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 underline underline-offset-2 hover:text-amber-900"
+                  >
+                    View post ↗
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <FormField

@@ -98,6 +98,20 @@ export const DELETE_JOB_POST = gql`
   }
 `
 
+export const CHECK_DUPLICATE_JOB_POSTS = gql`
+  query CheckDuplicateJobPosts($title: String!, $postedBy: String!, $excludeId: ID) {
+    checkDuplicateJobPosts(title: $title, postedBy: $postedBy, excludeId: $excludeId) {
+      id
+      title
+      postedBy
+      postedAt
+      sourceUrl
+      status
+      createdAt
+    }
+  }
+`
+
 // ─── Job Applications ─────────────────────────────────────────────────────────
 
 export const JOB_APPLICATIONS_QUERY = gql`
