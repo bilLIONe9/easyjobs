@@ -1,4 +1,5 @@
 import { GraphQLContext, requireAuth } from '../context'
+import { cvGenerationQueue } from '@/lib/queue'
 
 const PAGE_SIZE = 20
 
@@ -242,6 +243,115 @@ export const jobApplicationResolvers = {
       const userId = requireAuth(ctx.userId)
       await ctx.prisma.jobApplication.delete({ where: { id: args.id, userId } })
       return true
+    },
+
+    generateCV: async (_: unknown, args: { applicationId: string }, ctx: GraphQLContext) => {
+      const userId = requireAuth(ctx.userId)
+
+      const application = await ctx.prisma.jobApplication.findFirst({
+        where: { id: args.applicationId, userId },
+        include: { jobPost: true, jobProfile: true },
+      })
+      if (!application) throw new Error('Application not found')
+
+      await cvGenerationQueue.add('generate-cv', {
+        applicationId: application.id,
+        userId,
+        jobTitle: application.jobPost.title,
+        jobDescription: application.jobPost.description,
+        profileDetails: application.jobProfile?.details ?? null,
+      })
+
+      return ctx.prisma.jobApplication.update({
+        where: { id: args.applicationId },
+        data: { cvGenerationStatus: 'queued' },
+        include: {
+          jobPost: true,
+          jobProfile: true,
+          statusHistory: { orderBy: { changedAt: 'asc' } },
+          customQuestions: { orderBy: { sortOrder: 'asc' } },
+        },
+      })
+    },
+
+    createResumeFromCV: async (
+      _: unknown,
+      args: { applicationId: string; cvData: any },
+      ctx: GraphQLContext,
+    ) => {
+      if (!ctx.isWebhook && !ctx.userId) throw new Error('Not authenticated')
+
+      const application = await ctx.prisma.jobApplication.findUnique({
+        where: { id: args.applicationId },
+      })
+      if (!application) throw new Error('Application not found')
+
+      // Find or create a Profile for the user so Resume has a valid profileId
+      let profile = await ctx.prisma.profile.findFirst({
+        where: { userId: application.userId },
+      })
+      if (!profile) {
+        profile = await ctx.prisma.profile.create({ data: { userId: application.userId } })
+      }
+
+      const resume = await ctx.prisma.$transaction(async (tx: any) => {
+        const r = await tx.resume.create({
+          data: { profileId: profile!.id, title: args.cvData.title ?? 'Generated Resume' },
+        })
+
+        if (args.cvData.contactInfo) {
+          const ci = args.cvData.contactInfo
+          await tx.contactInfo.create({
+            data: {
+              resumeId: r.id,
+              firstName: ci.firstName ?? '',
+              lastName: ci.lastName ?? '',
+              headline: ci.headline ?? '',
+              email: ci.email ?? '',
+              phone: ci.phone ?? '',
+              address: ci.address ?? null,
+            },
+          })
+        }
+
+        for (const section of args.cvData.sections ?? []) {
+          if (section.sectionType === 'summary' && section.content) {
+            const summary = await tx.summary.create({ data: { content: section.content } })
+            await tx.resumeSection.create({
+              data: {
+                resumeId: r.id,
+                sectionTitle: section.sectionTitle,
+                sectionType: 'summary',
+                summaryId: summary.id,
+              },
+            })
+          } else {
+            const rs = await tx.resumeSection.create({
+              data: { resumeId: r.id, sectionTitle: section.sectionTitle, sectionType: 'other' },
+            })
+            await tx.otherSection.create({
+              data: {
+                resumeSectionId: rs.id,
+                title: section.sectionTitle,
+                content: section.content ?? '',
+              },
+            })
+          }
+        }
+
+        return r
+      })
+
+      return ctx.prisma.jobApplication.update({
+        where: { id: args.applicationId },
+        data: { cvData: args.cvData, cvGenerationStatus: 'done', resumeId: resume.id },
+        include: {
+          jobPost: true,
+          jobProfile: true,
+          statusHistory: { orderBy: { changedAt: 'asc' } },
+          customQuestions: { orderBy: { sortOrder: 'asc' } },
+        },
+      })
     },
   },
 

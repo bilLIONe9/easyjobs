@@ -116,5 +116,9 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     updateApplication(id: ID!, input: UpdateApplicationInput!): JobApplication!
     deleteApplicationQuestion(id: ID!): Boolean!
     deleteApplication(id: ID!): Boolean!
+    # Enqueues a CV generation job for the external generator service to pick up
+    generateCV(applicationId: ID!): JobApplication!
+    # Called by the external generator service when CV generation is complete
+    createResumeFromCV(applicationId: ID!, cvData: JSON!): JobApplication!
   }
 `
