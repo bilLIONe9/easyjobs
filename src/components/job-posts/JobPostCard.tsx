@@ -32,6 +32,7 @@ interface JobPostCardProps {
     sourceUrl?: string | null
     status: string
     applicationCount: number
+    savedProfileIds: string[]
   }
   onSaved?: () => void
 }
@@ -144,6 +145,7 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
       <SaveToApplyDialog
         jobPostId={post.id}
         jobPostTitle={post.title}
+        savedProfileIds={post.savedProfileIds}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSaved={onSaved}

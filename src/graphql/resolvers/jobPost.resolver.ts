@@ -6,7 +6,7 @@ export const jobPostResolvers = {
   Query: {
     jobPosts: async (
       _: unknown,
-      args: { filter?: { status?: string; search?: string; startDate?: string; endDate?: string }; page?: number; limit?: number },
+      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[] }; page?: number; limit?: number },
       ctx: GraphQLContext,
     ) => {
       const userId = requireAuth(ctx.userId)
@@ -24,11 +24,24 @@ export const jobPostResolvers = {
           { location: { contains: filter.search, mode: 'insensitive' } },
         ]
       }
-      if (filter?.startDate) where.postedAt = { ...where.postedAt, gte: new Date(filter.startDate) }
-      if (filter?.endDate) where.postedAt = { ...where.postedAt, lte: new Date(filter.endDate) }
+      if (filter?.startDate) where.postedAt = { gte: new Date(filter.startDate) }
+      if (filter?.excludeProfileIds?.length) {
+        const saved = await ctx.prisma.jobApplication.findMany({
+          where: { userId, jobProfileId: { in: filter.excludeProfileIds } },
+          select: { jobPostId: true },
+        })
+        const excludeIds = [...new Set(saved.map((a: any) => a.jobPostId))]
+        if (excludeIds.length) where.id = { notIn: excludeIds }
+      }
 
       const [items, total] = await Promise.all([
-        ctx.prisma.jobPost.findMany({ where, skip, take: limit, orderBy: { postedAt: 'desc' }, include: { _count: { select: { applications: true } } } }),
+        ctx.prisma.jobPost.findMany({
+          where, skip, take: limit, orderBy: { postedAt: 'desc' },
+          include: {
+            _count: { select: { applications: true } },
+            applications: { select: { jobProfileId: true } },
+          },
+        }),
         ctx.prisma.jobPost.count({ where }),
       ])
 
@@ -82,6 +95,8 @@ export const jobPostResolvers = {
 
   JobPost: {
     applicationCount: (parent: any) => parent._count?.applications ?? 0,
+    savedProfileIds: (parent: any) =>
+      (parent.applications ?? []).map((a: any) => a.jobProfileId).filter(Boolean),
     applications: async (parent: any, _: unknown, ctx: GraphQLContext) => {
       if (parent.applications) return parent.applications
       return ctx.prisma.jobApplication.findMany({ where: { jobPostId: parent.id } })

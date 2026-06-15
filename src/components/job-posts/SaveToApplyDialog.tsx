@@ -18,6 +18,7 @@ import { JOB_PROFILES_QUERY, SAVE_JOB_POST_TO_APPLY } from '@/lib/graphql/querie
 interface SaveToApplyDialogProps {
   jobPostId: string
   jobPostTitle: string
+  savedProfileIds: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved?: () => void
@@ -26,6 +27,7 @@ interface SaveToApplyDialogProps {
 export function SaveToApplyDialog({
   jobPostId,
   jobPostTitle,
+  savedProfileIds,
   open,
   onOpenChange,
   onSaved,
@@ -47,8 +49,8 @@ export function SaveToApplyDialog({
     },
   })
 
-  const profiles = (profilesData as any)?.jobProfiles ?? []
-  const defaultProfile = profiles.find((p: any) => p.isDefault)
+  const allProfiles = (profilesData as any)?.jobProfiles ?? []
+  const profiles = allProfiles.filter((p: any) => !savedProfileIds.includes(p.id))
 
   const handleSave = () => {
     const selectedProfileId = profileId === 'none' ? undefined : profileId
@@ -91,10 +93,15 @@ export function SaveToApplyDialog({
                 You can generate or manually draft a CV after saving.
               </p>
             )}
-            {profiles.length === 0 && !profilesLoading && (
+            {allProfiles.length === 0 && !profilesLoading && (
               <p className="text-xs text-muted-foreground">
                 No profiles yet.{' '}
                 <a href="/dashboard/job-profiles" className="underline">Create one</a> to enable CV generation.
+              </p>
+            )}
+            {allProfiles.length > 0 && profiles.length === 0 && !profilesLoading && (
+              <p className="text-xs text-muted-foreground">
+                All profiles have already saved this job.
               </p>
             )}
           </div>

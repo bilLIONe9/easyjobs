@@ -15,6 +15,7 @@ export const JOB_POSTS_QUERY = gql`
         sourceUrl
         status
         applicationCount
+        savedProfileIds
         createdAt
       }
       total

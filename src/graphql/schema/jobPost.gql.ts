@@ -13,6 +13,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     updatedAt: String!
     applications: [JobApplication!]!
     applicationCount: Int!
+    savedProfileIds: [ID!]!
   }
 
   type JobPostPage {
@@ -55,7 +56,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     status: String
     search: String
     startDate: String
-    endDate: String
+    excludeProfileIds: [ID]
   }
 
   extend type Query {
