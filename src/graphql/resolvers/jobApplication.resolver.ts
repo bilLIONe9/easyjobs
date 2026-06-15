@@ -1,5 +1,4 @@
 import { GraphQLContext, requireAuth } from '../context'
-import { publishCVGeneration } from '@/lib/queue/amqp'
 
 const PAGE_SIZE = 20
 
@@ -221,20 +220,6 @@ export const jobApplicationResolvers = {
           },
         })
       })
-    },
-
-    triggerCVGeneration: async (_: unknown, args: { applicationId: string }, ctx: GraphQLContext) => {
-      const userId = requireAuth(ctx.userId)
-      const app = await ctx.prisma.jobApplication.findFirst({ where: { id: args.applicationId, userId } })
-      if (!app) throw new Error('Application not found')
-
-      await ctx.prisma.jobApplication.update({
-        where: { id: args.applicationId },
-        data: { cvGenerationStatus: 'pending' },
-      })
-
-      await publishCVGeneration({ applicationId: args.applicationId, userId })
-      return true
     },
 
     deleteApplicationQuestion: async (_: unknown, args: { id: string }, ctx: GraphQLContext) => {

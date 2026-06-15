@@ -16,11 +16,6 @@ export const APP_CONSTANTS = {
   AI_SLOW_RESPONSE_THRESHOLD_MS: 15_000, // 15 seconds
 } as const;
 
-export const SCHEDULER_CONSTANTS = {
-  ENABLED: true,
-  CRON_EXPRESSION: "0 * * * *", // Every hour at minute 0
-} as const;
-
 export const JOB_SOURCES = [
   { label: "Indeed", value: "indeed" },
   { label: "Linkedin", value: "linkedin" },

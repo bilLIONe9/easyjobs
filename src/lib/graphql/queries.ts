@@ -253,12 +253,6 @@ export const UPDATE_APPLICATION = gql`
   }
 `
 
-export const TRIGGER_CV_GENERATION = gql`
-  mutation TriggerCVGeneration($applicationId: ID!) {
-    triggerCVGeneration(applicationId: $applicationId)
-  }
-`
-
 export const DELETE_APPLICATION = gql`
   mutation DeleteApplication($id: ID!) {
     deleteApplication(id: $id)

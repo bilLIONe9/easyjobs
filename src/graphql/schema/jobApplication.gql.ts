@@ -113,7 +113,6 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     saveJobPostToApply(jobPostId: ID!, profileId: ID): JobApplication!
     updateApplicationStatus(id: ID!, status: String!, note: String): JobApplication!
     updateApplication(id: ID!, input: UpdateApplicationInput!): JobApplication!
-    triggerCVGeneration(applicationId: ID!): Boolean!
     deleteApplicationQuestion(id: ID!): Boolean!
     deleteApplication(id: ID!): Boolean!
   }
