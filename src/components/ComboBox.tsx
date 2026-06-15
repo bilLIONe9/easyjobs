@@ -66,6 +66,7 @@ export function Combobox({ options, field, creatable }: ComboboxProps) {
           response = data;
           break;
         case "source":
+        case "jobSource": {
           const sourceRes = await createJobSource(label);
           if (!sourceRes.success) {
             toast({
@@ -77,11 +78,12 @@ export function Combobox({ options, field, creatable }: ComboboxProps) {
           response = sourceRes.data;
           if (!sourceRes.success) return;
           break;
+        }
         case "activityType":
           response = await createActivityType(label);
           break;
         default:
-          break;
+          return;
       }
       options.unshift(response);
       field.onChange(response.id);

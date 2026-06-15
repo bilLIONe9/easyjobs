@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -15,6 +15,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { JobPostCard } from './JobPostCard'
 import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY, JOB_PROFILES_QUERY } from '@/lib/graphql/queries'
+import { getAllJobLocations } from '@/actions/jobLocation.actions'
 
 const DATE_PRESETS = [
   { value: '1d', label: '1 day' },
@@ -57,6 +58,17 @@ export function JobPostsContainer() {
   const [excludeProfileIds, setExcludeProfileIds] = useState<string[]>([])
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
 
+  // Location filter
+  const [locationFilter, setLocationFilter] = useState<string | null>(null)
+  const [locationOptions, setLocationOptions] = useState<{ id: string; label: string }[]>([])
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
+
+  useEffect(() => {
+    getAllJobLocations().then((res) => {
+      if (Array.isArray(res)) setLocationOptions(res)
+    })
+  }, [])
+
   const dateFilter = getDateFilter(datePreset, customStartDate)
 
   const filter = {
@@ -64,6 +76,7 @@ export function JobPostsContainer() {
     ...(status !== 'all' ? { status } : {}),
     ...dateFilter,
     ...(excludeProfileIds.length ? { excludeProfileIds } : {}),
+    ...(locationFilter ? { location: locationFilter } : {}),
   }
 
   const { data, loading, refetch } = useQuery(JOB_POSTS_QUERY, {
@@ -159,6 +172,52 @@ export function JobPostsContainer() {
             <SelectItem value="inappropriate">Inappropriate</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Location filter */}
+        {locationOptions.length > 0 && (
+          <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={locationFilter ? 'secondary' : 'outline'}
+                size="sm"
+                className="gap-1.5 h-9"
+                role="combobox"
+              >
+                {locationFilter ?? 'All locations'}
+                {locationFilter
+                  ? <X className="h-3.5 w-3.5 opacity-50" onClick={(e) => { e.stopPropagation(); setLocationFilter(null); setPage(1) }} />
+                  : <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                }
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search locations..." />
+                <CommandList>
+                  <CommandEmpty>No locations found.</CommandEmpty>
+                  <CommandGroup>
+                    {locationOptions.map((loc) => (
+                      <CommandItem
+                        key={loc.id}
+                        value={loc.label}
+                        onSelect={() => {
+                          setLocationFilter((prev) => prev === loc.label ? null : loc.label)
+                          setPage(1)
+                          setLocationPopoverOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn('mr-2 h-4 w-4', locationFilter === loc.label ? 'opacity-100' : 'opacity-0')}
+                        />
+                        {loc.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* Exclude by profile */}
         {profiles.length > 0 && (

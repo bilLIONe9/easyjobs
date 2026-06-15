@@ -1,18 +1,21 @@
 'use client'
 import { useState } from 'react'
-import { useMutation } from '@apollo/client/react'
-import { MapPin, DollarSign, User, Calendar, ExternalLink, MoreHorizontal } from 'lucide-react'
+import { useMutation, useLazyQuery } from '@apollo/client/react'
+import { MapPin, DollarSign, User, Calendar, ExternalLink, MoreHorizontal, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { SET_JOB_POST_STATUS, DELETE_JOB_POST, JOB_POSTS_QUERY } from '@/lib/graphql/queries'
+import { SET_JOB_POST_STATUS, DELETE_JOB_POST, JOB_POSTS_QUERY, JOB_POST_QUERY } from '@/lib/graphql/queries'
 import { SaveToApplyDialog } from './SaveToApplyDialog'
+import { JobPostForm } from './JobPostForm'
 import { format } from 'date-fns'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -26,7 +29,7 @@ interface JobPostCardProps {
     id: string
     title: string
     salary?: string | null
-    location?: string | null
+    locations?: string[] | null
     postedAt: string
     postedBy: string
     sourceUrl?: string | null
@@ -39,13 +42,19 @@ interface JobPostCardProps {
 
 export function JobPostCard({ post, onSaved }: JobPostCardProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
 
-  const [setStatus] = useMutation(SET_JOB_POST_STATUS, {
-    refetchQueries: [JOB_POSTS_QUERY],
-  })
-  const [deletePost] = useMutation(DELETE_JOB_POST, {
-    refetchQueries: [JOB_POSTS_QUERY],
-  })
+  const [setStatus] = useMutation(SET_JOB_POST_STATUS, { refetchQueries: [JOB_POSTS_QUERY] })
+  const [deletePost] = useMutation(DELETE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
+  const [fetchPost, { data: fullPostData, loading: fetchingPost }] = useLazyQuery(JOB_POST_QUERY)
+
+  function handleEditClick() {
+    setEditOpen(true)
+    fetchPost({ variables: { id: post.id } })
+  }
+
+  const fullPost = (fullPostData as any)?.jobPost
+  const locations = post.locations ?? []
 
   return (
     <>
@@ -70,6 +79,10 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleEditClick}>
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   {post.status !== 'closed' && (
                     <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'closed' } })}>
                       Mark as Closed
@@ -85,6 +98,7 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
                       Mark as Active
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive"
                     onClick={() => deletePost({ variables: { id: post.id } })}
@@ -98,10 +112,10 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
         </CardHeader>
         <CardContent className="pt-0 space-y-2">
           <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            {post.location && (
+            {locations.length > 0 && (
               <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {post.location}
+                <MapPin className="h-3 w-3 shrink-0" />
+                {locations.join(' · ')}
               </span>
             )}
             {post.salary && (
@@ -150,6 +164,25 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
         onOpenChange={setDialogOpen}
         onSaved={onSaved}
       />
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Job Post</DialogTitle>
+          </DialogHeader>
+          {fetchingPost || !fullPost ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <JobPostForm
+              editPost={fullPost}
+              onSuccess={() => setEditOpen(false)}
+              onCancel={() => setEditOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

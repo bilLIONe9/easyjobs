@@ -9,7 +9,7 @@ export const JOB_POSTS_QUERY = gql`
         id
         title
         salary
-        location
+        locations
         postedAt
         postedBy
         sourceUrl
@@ -32,7 +32,7 @@ export const JOB_POST_QUERY = gql`
       title
       description
       salary
-      location
+      locations
       postedAt
       postedBy
       sourceUrl
@@ -127,7 +127,7 @@ export const JOB_APPLICATIONS_QUERY = gql`
           id
           title
           postedBy
-          location
+          locations
           salary
         }
         jobProfile {
@@ -162,7 +162,7 @@ export const JOB_APPLICATION_QUERY = gql`
         title
         description
         salary
-        location
+        locations
         postedBy
         postedAt
         sourceUrl

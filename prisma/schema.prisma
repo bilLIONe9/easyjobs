@@ -479,7 +479,7 @@ model JobPost {
   title        String
   description  String
   salary       String?
-  location     String?
+  locations    String[]         @default([])
   postedAt     DateTime
   postedBy     String
   sourceUrl    String?

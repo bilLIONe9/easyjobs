@@ -6,7 +6,7 @@ export const jobPostResolvers = {
   Query: {
     jobPosts: async (
       _: unknown,
-      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[] }; page?: number; limit?: number },
+      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[]; location?: string }; page?: number; limit?: number },
       ctx: GraphQLContext,
     ) => {
       const userId = requireAuth(ctx.userId)
@@ -21,9 +21,9 @@ export const jobPostResolvers = {
         where.OR = [
           { title: { contains: filter.search, mode: 'insensitive' } },
           { postedBy: { contains: filter.search, mode: 'insensitive' } },
-          { location: { contains: filter.search, mode: 'insensitive' } },
         ]
       }
+      if (filter?.location) where.locations = { has: filter.location }
       if (filter?.startDate) where.postedAt = { gte: new Date(filter.startDate) }
       if (filter?.excludeProfileIds?.length) {
         const saved = await ctx.prisma.jobApplication.findMany({

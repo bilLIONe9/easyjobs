@@ -4,8 +4,10 @@ import { useMutation, useLazyQuery } from '@apollo/client/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
+import { X, Plus, Check, ChevronsUpDown, CirclePlus, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import {
   Form,
   FormControl,
@@ -15,9 +17,13 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { cn } from '@/lib/utils'
 import { Combobox } from '@/components/ComboBox'
 import { getAllCompanies } from '@/actions/company.actions'
 import { getAllJobLocations } from '@/actions/jobLocation.actions'
+import { createLocation } from '@/actions/job.actions'
 import { getJobSourceList } from '@/actions/jobSource.actions'
 import { JOB_TYPES } from '@/models/job.model'
 import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, CHECK_DUPLICATE_JOB_POSTS } from '@/lib/graphql/queries'
@@ -29,7 +35,7 @@ const schema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   company: z.string().min(1, 'Company is required'),
-  location: z.string().optional(),
+  locations: z.array(z.string()),
   postedAt: z.string().min(1, 'Posted date is required'),
   salary: z.string().optional(),
   sourceUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
@@ -47,19 +53,23 @@ interface JobPostFormProps {
     postedBy: string
     postedAt: string
     salary?: string | null
-    location?: string | null
+    locations?: string[] | null
     sourceUrl?: string | null
     jobType?: string | null
     jobSource?: string | null
   }
   onSuccess?: () => void
+  onCancel?: () => void
 }
 
-export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
+export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps) {
   const router = useRouter()
   const [companies, setCompanies] = useState<any[]>([])
-  const [locations, setLocations] = useState<any[]>([])
+  const [locationOptions, setLocationOptions] = useState<any[]>([])
   const [jobSources, setJobSources] = useState<any[]>([])
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
+  const [locationSearch, setLocationSearch] = useState('')
+  const [isCreatingLocation, setIsCreatingLocation] = useState(false)
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -72,14 +82,14 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
           sourceUrl: editPost.sourceUrl ?? '',
           jobType: editPost.jobType ?? '',
           company: '',
-          location: '',
+          locations: [],
           jobSource: '',
         }
       : {
           title: '',
           description: '',
           company: '',
-          location: '',
+          locations: [],
           salary: '',
           sourceUrl: '',
           jobType: '',
@@ -111,15 +121,19 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
           form.setValue('company', synthetic.id)
         }
 
-        if (editPost.location) {
-          const matchedLocation = locationList.find((lo) => lo.label === editPost.location)
-          if (matchedLocation) {
-            form.setValue('location', matchedLocation.id)
-          } else {
-            const synthetic = { id: `__${editPost.location}__`, label: editPost.location, value: editPost.location }
-            locationList.unshift(synthetic)
-            form.setValue('location', synthetic.id)
+        if (editPost.locations?.length) {
+          const locIds: string[] = []
+          for (const loc of editPost.locations) {
+            const matched = locationList.find((lo) => lo.label === loc)
+            if (matched) {
+              locIds.push(matched.id)
+            } else {
+              const synthetic = { id: `__${loc}__`, label: loc, value: loc }
+              locationList.unshift(synthetic)
+              locIds.push(synthetic.id)
+            }
           }
+          form.setValue('locations', locIds)
         }
 
         if (editPost.jobSource) {
@@ -135,7 +149,7 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
       }
 
       setCompanies([...companyList])
-      setLocations([...locationList])
+      setLocationOptions([...locationList])
       setJobSources([...sourceList])
     })()
     return () => { active = false }
@@ -165,8 +179,10 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
 
   const onSubmit = async (data: FormData) => {
     const selectedCompany = companies.find((c) => c.id === data.company)
-    const selectedLocation = locations.find((l) => l.id === data.location)
     const selectedJobSource = jobSources.find((s) => s.id === data.jobSource)
+    const locationLabels = (data.locations ?? []).map(
+      (id) => locationOptions.find((l) => l.id === id)?.label ?? id,
+    )
 
     const input = {
       title: data.title,
@@ -174,7 +190,7 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
       postedBy: selectedCompany?.label ?? data.company,
       postedAt: new Date(data.postedAt).toISOString(),
       salary: data.salary || null,
-      location: selectedLocation?.label ?? data.location ?? null,
+      locations: locationLabels,
       sourceUrl: data.sourceUrl || null,
       jobType: data.jobType || null,
       jobSource: (selectedJobSource?.label ?? data.jobSource) || null,
@@ -249,15 +265,108 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
-            name="location"
+            name="locations"
             render={({ field }) => (
               <FormItem className="flex flex-col">
-                <FormLabel>Location</FormLabel>
-                <FormControl>
-                  <Combobox options={locations} field={field} creatable />
-                </FormControl>
+                <FormLabel>Locations</FormLabel>
+                <div className="space-y-1.5">
+                  {field.value.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {field.value.map((locId: string) => {
+                        const loc = locationOptions.find((l) => l.id === locId)
+                        return (
+                          <Badge key={locId} variant="secondary" className="gap-1 pr-1">
+                            {loc?.label ?? locId}
+                            <button
+                              type="button"
+                              onClick={() => field.onChange(field.value.filter((id: string) => id !== locId))}
+                              className="rounded-full hover:bg-muted-foreground/20 p-0.5"
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </Badge>
+                        )
+                      })}
+                    </div>
+                  )}
+                  <Popover open={locationPopoverOpen} onOpenChange={(open) => { setLocationPopoverOpen(open); if (!open) setLocationSearch('') }}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" type="button">
+                        <Plus className="h-3 w-3" />
+                        Add location
+                        <ChevronsUpDown className="h-3 w-3 opacity-50 ml-auto" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search or create..."
+                          value={locationSearch}
+                          onValueChange={setLocationSearch}
+                        />
+                        <CommandList>
+                          <CommandEmpty>
+                            {locationSearch.trim() ? (
+                              <button
+                                type="button"
+                                disabled={isCreatingLocation}
+                                className="flex w-full items-center gap-1.5 px-2 py-1.5 text-sm italic cursor-pointer hover:bg-accent"
+                                onClick={async () => {
+                                  const label = locationSearch.trim()
+                                  if (!label) return
+                                  setIsCreatingLocation(true)
+                                  try {
+                                    const res = await createLocation(label)
+                                    const loc = res?.data
+                                    if (loc?.id) {
+                                      setLocationOptions((prev) =>
+                                        prev.find((l) => l.id === loc.id) ? prev : [...prev, loc]
+                                      )
+                                      field.onChange([...field.value, loc.id])
+                                    }
+                                    setLocationSearch('')
+                                    setLocationPopoverOpen(false)
+                                  } finally {
+                                    setIsCreatingLocation(false)
+                                  }
+                                }}
+                              >
+                                {isCreatingLocation
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                                  : <CirclePlus className="h-3.5 w-3.5 shrink-0" />
+                                }
+                                <span>Create &ldquo;<span className="font-semibold text-foreground">{locationSearch}</span>&rdquo;</span>
+                              </button>
+                            ) : (
+                              <p className="px-2 py-1.5 text-sm text-muted-foreground">No locations found.</p>
+                            )}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {locationOptions
+                              .filter((l) => !field.value.includes(l.id))
+                              .map((l) => (
+                                <CommandItem
+                                  key={l.id}
+                                  value={l.value ?? l.label}
+                                  onSelect={() => {
+                                    field.onChange([...field.value, l.id])
+                                    setLocationSearch('')
+                                    setLocationPopoverOpen(false)
+                                  }}
+                                >
+                                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                                  {l.label}
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -362,7 +471,11 @@ export function JobPostForm({ editPost, onSuccess }: JobPostFormProps) {
         />
 
         <div className="flex gap-2 justify-end">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onCancel ? onCancel() : router.back()}
+          >
             Cancel
           </Button>
           <Button type="submit" disabled={form.formState.isSubmitting}>

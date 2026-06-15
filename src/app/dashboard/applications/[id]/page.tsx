@@ -320,7 +320,7 @@ export default function ApplicationDetailPage() {
         </div>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-          {app.jobPost.location && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{app.jobPost.location}</span>}
+          {app.jobPost.locations?.length > 0 && <span className="flex items-center gap-1"><MapPin className="h-3 w-3 shrink-0" />{app.jobPost.locations.join(' · ')}</span>}
           {app.jobPost.salary && <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" />{app.jobPost.salary}</span>}
           <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />Posted {format(new Date(app.jobPost.postedAt), 'MMM d, yyyy')}</span>
           {app.jobPost.sourceUrl && (

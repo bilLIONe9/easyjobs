@@ -4,7 +4,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     title: String!
     description: String!
     salary: String
-    location: String
+    locations: [String!]!
     postedAt: String!
     postedBy: String!
     sourceUrl: String
@@ -37,7 +37,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     title: String!
     description: String!
     salary: String
-    location: String
+    locations: [String!]!
     postedAt: String!
     postedBy: String!
     sourceUrl: String
@@ -49,7 +49,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     title: String
     description: String
     salary: String
-    location: String
+    locations: [String!]!
     postedAt: String
     postedBy: String
     sourceUrl: String
@@ -63,6 +63,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     search: String
     startDate: String
     excludeProfileIds: [ID]
+    location: String
   }
 
   extend type Query {

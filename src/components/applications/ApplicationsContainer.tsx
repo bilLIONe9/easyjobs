@@ -402,10 +402,10 @@ export function ApplicationsContainer() {
                   </Link>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
                     <span>{app.jobPost.postedBy}</span>
-                    {app.jobPost.location && (
+                    {app.jobPost.locations?.length > 0 && (
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {app.jobPost.location}
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {app.jobPost.locations.join(' · ')}
                       </span>
                     )}
                     {app.jobProfile && <span>Profile: {app.jobProfile.name}</span>}
