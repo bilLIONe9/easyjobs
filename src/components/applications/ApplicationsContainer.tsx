@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation } from '@apollo/client/react'
 import type { TypedDocumentNode } from '@apollo/client'
 import Link from 'next/link'
@@ -16,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { JOB_APPLICATIONS_QUERY, JOB_PROFILES_QUERY, UPDATE_APPLICATION_STATUS, DELETE_APPLICATION } from '@/lib/graphql/queries'
+import { getAllCompanies } from '@/actions/company.actions'
 
 const APPLICATION_STATUSES = [
   'saved', 'applied', 'phone_screen', 'interview', 'technical_test', 'offer', 'rejected', 'withdrawn',
@@ -90,6 +91,17 @@ export function ApplicationsContainer() {
   const [cvReady, setCvReady] = useState(false)
   const [page, setPage] = useState(1)
 
+  // Company filter
+  const [company, setCompany] = useState<string | null>(null)
+  const [companies, setCompanies] = useState<{ id: string; label: string }[]>([])
+  const [companyPopoverOpen, setCompanyPopoverOpen] = useState(false)
+
+  useEffect(() => {
+    getAllCompanies().then((res) => {
+      if (Array.isArray(res)) setCompanies(res)
+    })
+  }, [])
+
   // Profile multi-select
   const [profileIds, setProfileIds] = useState<string[]>([])
   const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
@@ -111,6 +123,7 @@ export function ApplicationsContainer() {
     ...(status !== 'all' ? { status } : {}),
     ...(cvReady ? { cvReady: true } : {}),
     ...(profileIds.length ? { profileIds } : {}),
+    ...(company ? { company } : {}),
     ...dateRangeFilter,
   }
 
@@ -200,6 +213,52 @@ export function ApplicationsContainer() {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Company filter */}
+        {companies.length > 0 && (
+          <Popover open={companyPopoverOpen} onOpenChange={setCompanyPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={company ? 'secondary' : 'outline'}
+                size="sm"
+                className="gap-1.5 h-9"
+                role="combobox"
+              >
+                {company ?? 'All companies'}
+                {company
+                  ? <X className="h-3.5 w-3.5 opacity-50" onClick={(e) => { e.stopPropagation(); setCompany(null); setPage(1) }} />
+                  : <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                }
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search company..." />
+                <CommandList>
+                  <CommandEmpty>No companies found.</CommandEmpty>
+                  <CommandGroup>
+                    {companies.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        value={c.label}
+                        onSelect={() => {
+                          setCompany((prev) => prev === c.label ? null : c.label)
+                          setPage(1)
+                          setCompanyPopoverOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn('mr-2 h-4 w-4', company === c.label ? 'opacity-100' : 'opacity-0')}
+                        />
+                        {c.label}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
 
         {/* Profile multi-select */}
         {profiles.length > 0 && (

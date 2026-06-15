@@ -24,8 +24,11 @@ export const jobApplicationResolvers = {
       }
       if (filter?.cvReady === true) where.cvGenerationStatus = 'done'
       if (filter?.startDate) where.createdAt = { gte: new Date(filter.startDate) }
-      if (filter?.search) {
-        where.jobPost = { title: { contains: filter.search, mode: 'insensitive' } }
+      if (filter?.search || filter?.company) {
+        const jobPostFilter: any = {}
+        if (filter.search) jobPostFilter.title = { contains: filter.search, mode: 'insensitive' }
+        if (filter.company) jobPostFilter.postedBy = { contains: filter.company, mode: 'insensitive' }
+        where.jobPost = jobPostFilter
       }
 
       const [items, total] = await Promise.all([

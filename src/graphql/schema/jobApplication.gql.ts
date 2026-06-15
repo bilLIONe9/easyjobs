@@ -101,6 +101,7 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     cvReady: Boolean
     startDate: String
     search: String
+    company: String
   }
 
   extend type Query {
