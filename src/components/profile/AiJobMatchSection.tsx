@@ -2,7 +2,6 @@
 
 import { experimental_useObject as useObject } from "@ai-sdk/react";
 import { getResumeList } from "@/actions/profile.actions";
-import { saveJobMatchResult } from "@/actions/job.actions";
 import {
   Sheet,
   SheetContent,
@@ -114,19 +113,7 @@ export const AiJobMatchSection = ({
       matchedAt: new Date().toISOString(),
     });
     const score = object.matchScore;
-
-    saveJobMatchResult(jobId, score, matchData).then((result) => {
-      if (result?.success) {
-        onMatchSaved?.(score, matchData);
-        toast({ title: "Match result saved" });
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Error!",
-          description: result?.message || "Failed to save match result",
-        });
-      }
-    });
+    onMatchSaved?.(score, matchData);
   }, [isLoading, object, jobId, selectedResumeId, onMatchSaved]);
 
   const getResumes = async () => {

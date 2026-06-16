@@ -27,7 +27,7 @@ type ActivityTypeRow = {
   label: string;
   value: string;
   totalDuration: number;
-  _count?: { Activities?: number; Tasks?: number };
+  _count?: { Activities?: number };
 };
 
 type ActivityTypesTableProps = {
@@ -46,20 +46,12 @@ function ActivityTypesTable({
 
   const onDelete = (at: ActivityTypeRow) => {
     const activityCount = at._count?.Activities ?? 0;
-    const taskCount = at._count?.Tasks ?? 0;
 
-    if (activityCount > 0 || taskCount > 0) {
-      const links = [
-        activityCount > 0 ? `${activityCount} activity(ies)` : "",
-        taskCount > 0 ? `${taskCount} task(s)` : "",
-      ]
-        .filter(Boolean)
-        .join(" and ");
-
+    if (activityCount > 0) {
       setAlert({
         openState: true,
         title: "Activity type is in use!",
-        description: `This activity type is linked to ${links} and cannot be deleted.`,
+        description: `This activity type is linked to ${activityCount} activity(ies) and cannot be deleted.`,
         deleteAction: false,
       });
     } else {
@@ -102,7 +94,6 @@ function ActivityTypesTable({
             <TableHead>Label</TableHead>
             <TableHead className="hidden sm:table-cell">Value</TableHead>
             <TableHead># Activities</TableHead>
-            <TableHead># Tasks</TableHead>
             <TableHead>Total Hours</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
@@ -116,9 +107,6 @@ function ActivityTypesTable({
               </TableCell>
               <TableCell className="font-medium">
                 {at._count?.Activities ?? 0}
-              </TableCell>
-              <TableCell className="font-medium">
-                {at._count?.Tasks ?? 0}
               </TableCell>
               <TableCell className="font-medium">
                 {formatHours(at.totalDuration)} hrs

@@ -11,7 +11,6 @@ import {
   ListCollapse,
   MoreHorizontal,
   Pencil,
-  StickyNote,
   Tags,
   Trash,
 } from "lucide-react";
@@ -44,7 +43,6 @@ type MyJobsTableProps = {
   deleteJob: (id: string) => void;
   editJob: (id: string) => void;
   onChangeJobStatus: (id: string, status: JobStatus) => void;
-  onAddNote: (jobId: string) => void;
 };
 
 function MyJobsTable({
@@ -53,7 +51,6 @@ function MyJobsTable({
   deleteJob,
   editJob,
   onChangeJobStatus,
-  onAddNote,
 }: MyJobsTableProps) {
   const [alertOpen, setAlertOpen] = useState(false);
   const [jobIdToDelete, setJobIdToDelete] = useState("");
@@ -81,7 +78,6 @@ function MyJobsTable({
             <TableHead>Company</TableHead>
             <TableHead className="hidden md:table-cell">Location</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden md:table-cell">Match</TableHead>
             <TableHead className="hidden md:table-cell">Source</TableHead>
             <TableHead>
               <span className="sr-only">Actions</span>
@@ -106,17 +102,9 @@ function MyJobsTable({
                 <TableCell
                   className="font-medium cursor-pointer max-w-[120px] sm:max-w-none"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <Link href={`/dashboard/myjobs/${job?.id}`} className="block truncate">
-                      {job.JobTitle?.label}
-                    </Link>
-                    {(job._count?.Notes ?? 0) > 0 && (
-                      <Badge variant="secondary" className="text-xs px-1.5 py-0 h-5 shrink-0">
-                        <StickyNote className="h-3 w-3 mr-0.5" />
-                        {job._count!.Notes}
-                      </Badge>
-                    )}
-                  </div>
+                  <Link href={`/dashboard/myjobs/${job?.id}`} className="block truncate">
+                    {job.JobTitle?.label}
+                  </Link>
                 </TableCell>
                 <TableCell className="font-medium max-w-[100px] sm:max-w-none">
                   <span className="block truncate">{job.Company?.label}</span>
@@ -138,9 +126,6 @@ function MyJobsTable({
                       {job.Status?.label}
                     </Badge>
                   )}
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {job.matchScore != null ? `${job.matchScore}%` : "-"}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {job.JobSource?.label}
@@ -174,13 +159,6 @@ function MyJobsTable({
                         >
                           <Pencil className="mr-2 h-4 w-4" />
                           Edit Job
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={() => onAddNote(job.id)}
-                        >
-                          <StickyNote className="mr-2 h-4 w-4" />
-                          Add a Note
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuSub>

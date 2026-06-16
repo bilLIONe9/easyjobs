@@ -127,8 +127,6 @@ export const getJobsList = async (
           description: false,
           Resume: true,
           CoverLetter: true,
-          matchScore: true,
-          _count: { select: { Notes: true } },
         },
         orderBy: {
           createdAt: "desc",
@@ -475,28 +473,6 @@ export const updateJobStatus = async (
   }
 };
 
-export const saveJobMatchResult = async (
-  jobId: string,
-  matchScore: number,
-  matchData: string,
-): Promise<any | undefined> => {
-  try {
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("Not authenticated");
-    }
-
-    await prisma.job.update({
-      where: { id: jobId, userId: user.id },
-      data: { matchScore, matchData },
-    });
-
-    return { success: true };
-  } catch (error) {
-    const msg = "Failed to save match result.";
-    return handleError(error, msg);
-  }
-};
 
 export const deleteJobById = async (
   jobId: string,

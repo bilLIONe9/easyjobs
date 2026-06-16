@@ -3,6 +3,14 @@ import { cvGenerationQueue } from '@/lib/queue'
 
 const PAGE_SIZE = 20
 
+const APPLICATION_INCLUDE = {
+  jobPost: true,
+  jobProfile: true,
+  resume: { select: { id: true, title: true } },
+  statusHistory: { orderBy: { changedAt: 'asc' as const } },
+  customQuestions: { orderBy: { sortOrder: 'asc' as const } },
+}
+
 export const jobApplicationResolvers = {
   Query: {
     jobApplications: async (
@@ -54,13 +62,7 @@ export const jobApplicationResolvers = {
       const userId = requireAuth(ctx.userId)
       return ctx.prisma.jobApplication.findFirst({
         where: { id: args.id, userId },
-        include: {
-          jobPost: true,
-          jobProfile: true,
-          resume: { select: { id: true, title: true } },
-          statusHistory: { orderBy: { changedAt: 'asc' } },
-          customQuestions: { orderBy: { sortOrder: 'asc' } },
-        },
+        include: APPLICATION_INCLUDE,
       })
     },
 
@@ -86,14 +88,12 @@ export const jobApplicationResolvers = {
         ctx.prisma.jobApplication.count({ where: { userId, cvGenerationStatus: 'done' } }),
       ])
 
-      // Status counts
       const statusMap: Record<string, number> = {}
       for (const app of applications) {
         statusMap[app.currentStatus] = (statusMap[app.currentStatus] ?? 0) + 1
       }
       const byStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }))
 
-      // Group histories by applicationId and compute durations
       const historyByApp: Record<string, any[]> = {}
       for (const h of allHistories) {
         if (!historyByApp[h.applicationId]) historyByApp[h.applicationId] = []
@@ -116,7 +116,6 @@ export const jobApplicationResolvers = {
         return { fromStatus, toStatus, avgDays: Math.round((val.total / val.count) * 10) / 10 }
       })
 
-      // Recent status changes (last 10)
       const recentHistories = await ctx.prisma.applicationStatusHistory.findMany({
         where: { application: { userId } },
         orderBy: { changedAt: 'desc' },
@@ -151,7 +150,7 @@ export const jobApplicationResolvers = {
       ctx: GraphQLContext,
     ) => {
       const userId = requireAuth(ctx.userId)
-      const application = await ctx.prisma.jobApplication.create({
+      return ctx.prisma.jobApplication.create({
         data: {
           userId,
           jobPostId: args.jobPostId,
@@ -167,8 +166,6 @@ export const jobApplicationResolvers = {
           customQuestions: true,
         },
       })
-
-      return application
     },
 
     updateApplicationStatus: async (
@@ -184,12 +181,7 @@ export const jobApplicationResolvers = {
             currentStatus: args.status,
             statusHistory: { create: { status: args.status, note: args.note ?? null } },
           },
-          include: {
-            jobPost: true,
-            jobProfile: true,
-            statusHistory: { orderBy: { changedAt: 'asc' } },
-            customQuestions: { orderBy: { sortOrder: 'asc' } },
-          },
+          include: APPLICATION_INCLUDE,
         }),
       ])
       return application
@@ -201,7 +193,6 @@ export const jobApplicationResolvers = {
 
       return ctx.prisma.$transaction(async (tx: any) => {
         if (customQuestions) {
-          // Upsert questions
           for (const q of customQuestions) {
             if (q.id) {
               await tx.applicationQuestion.update({
@@ -219,12 +210,7 @@ export const jobApplicationResolvers = {
         return tx.jobApplication.update({
           where: { id: args.id, userId },
           data,
-          include: {
-            jobPost: true,
-            jobProfile: true,
-            statusHistory: { orderBy: { changedAt: 'asc' } },
-            customQuestions: { orderBy: { sortOrder: 'asc' } },
-          },
+          include: APPLICATION_INCLUDE,
         })
       })
     },
@@ -265,12 +251,7 @@ export const jobApplicationResolvers = {
       return ctx.prisma.jobApplication.update({
         where: { id: args.applicationId },
         data: { cvGenerationStatus: 'queued' },
-        include: {
-          jobPost: true,
-          jobProfile: true,
-          statusHistory: { orderBy: { changedAt: 'asc' } },
-          customQuestions: { orderBy: { sortOrder: 'asc' } },
-        },
+        include: APPLICATION_INCLUDE,
       })
     },
 
@@ -286,7 +267,6 @@ export const jobApplicationResolvers = {
       })
       if (!application) throw new Error('Application not found')
 
-      // Find or create a Profile for the user so Resume has a valid profileId
       let profile = await ctx.prisma.profile.findFirst({
         where: { userId: application.userId },
       })
@@ -294,63 +274,18 @@ export const jobApplicationResolvers = {
         profile = await ctx.prisma.profile.create({ data: { userId: application.userId } })
       }
 
-      const resume = await ctx.prisma.$transaction(async (tx: any) => {
-        const r = await tx.resume.create({
-          data: { profileId: profile!.id, title: args.cvData.title ?? 'Generated Resume' },
-        })
-
-        if (args.cvData.contactInfo) {
-          const ci = args.cvData.contactInfo
-          await tx.contactInfo.create({
-            data: {
-              resumeId: r.id,
-              firstName: ci.firstName ?? '',
-              lastName: ci.lastName ?? '',
-              headline: ci.headline ?? '',
-              email: ci.email ?? '',
-              phone: ci.phone ?? '',
-              address: ci.address ?? null,
-            },
-          })
-        }
-
-        for (const section of args.cvData.sections ?? []) {
-          if (section.sectionType === 'summary' && section.content) {
-            const summary = await tx.summary.create({ data: { content: section.content } })
-            await tx.resumeSection.create({
-              data: {
-                resumeId: r.id,
-                sectionTitle: section.sectionTitle,
-                sectionType: 'summary',
-                summaryId: summary.id,
-              },
-            })
-          } else {
-            const rs = await tx.resumeSection.create({
-              data: { resumeId: r.id, sectionTitle: section.sectionTitle, sectionType: 'other' },
-            })
-            await tx.otherSection.create({
-              data: {
-                resumeSectionId: rs.id,
-                title: section.sectionTitle,
-                content: section.content ?? '',
-              },
-            })
-          }
-        }
-
-        return r
+      const resume = await ctx.prisma.resume.create({
+        data: {
+          profileId: profile.id,
+          title: args.cvData.title ?? 'Generated Resume',
+          cvData: args.cvData,
+        },
       })
 
       return ctx.prisma.jobApplication.update({
         where: { id: args.applicationId },
-        data: { cvData: args.cvData, cvGenerationStatus: 'done', resumeId: resume.id },
-        include: {
-          jobPost: true,
-          jobProfile: true,
-          statusHistory: { orderBy: { changedAt: 'asc' } },
-          customQuestions: { orderBy: { sortOrder: 'asc' } },
-        },
+        data: { cvGenerationStatus: 'done', resumeId: resume.id },
+        include: APPLICATION_INCLUDE,
       })
     },
   },

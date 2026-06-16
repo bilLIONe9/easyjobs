@@ -4,7 +4,6 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     jobPost: JobPost!
     jobProfile: JobProfile
     currentStatus: String!
-    cvData: JSON
     cvGenerationStatus: String
     resume: ResumeRef
     coverLetter: String
@@ -82,7 +81,6 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     coverLetter: String
     notes: String
     resumeId: ID
-    cvData: JSON
     customQuestions: [QuestionInput!]
   }
 

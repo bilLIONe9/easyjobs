@@ -15,38 +15,14 @@ import { Button } from "../ui/button";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AiJobMatchSection } from "../profile/AiJobMatchSection";
-import { NotesSection } from "./NotesSection";
-import { useState, useMemo, useCallback } from "react";
+import { useState } from "react";
 import { DownloadFileButton } from "../profile/DownloadFileButton";
-import { MatchDetails } from "../automations/MatchDetails";
-import type { JobMatchResponse } from "@/models/ai.schemas";
 
 function JobDetails({ job }: { job: JobResponse }) {
   const [aiSectionOpen, setAiSectionOpen] = useState(false);
-  const [currentMatchScore, setCurrentMatchScore] = useState(job.matchScore);
-  const [currentMatchData, setCurrentMatchData] = useState(job.matchData);
   const router = useRouter();
   const goBack = () => router.back();
 
-  const parsedMatchData = useMemo(() => {
-    if (!currentMatchData) return null;
-    try {
-      return JSON.parse(currentMatchData) as JobMatchResponse;
-    } catch {
-      return null;
-    }
-  }, [currentMatchData]);
-
-  const handleMatchSaved = useCallback(
-    (matchScore: number, matchData: string) => {
-      setCurrentMatchScore(matchScore);
-      setCurrentMatchData(matchData);
-    },
-    [],
-  );
-  const getAiJobMatch = async () => {
-    setAiSectionOpen(true);
-  };
   const getJobType = (code: string) => {
     switch (code) {
       case "FT":
@@ -69,8 +45,7 @@ function JobDetails({ job }: { job: JobResponse }) {
           size="sm"
           variant="outline"
           className="h-8 gap-1 cursor-pointer"
-          onClick={getAiJobMatch}
-          // disabled={loading}
+          onClick={() => setAiSectionOpen(true)}
         >
           <Sparkles className="h-3.5 w-3.5" />
           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
@@ -140,30 +115,14 @@ function JobDetails({ job }: { job: JobResponse }) {
           <div className="my-4 ml-4">
             <TipTapContentViewer content={job?.description} />
           </div>
-          <NotesSection jobId={job.id} />
-          {parsedMatchData && (
-            <div className="mx-4 mb-4">
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                AI Match Analysis
-                {currentMatchScore && (
-                  <Badge variant="default">{currentMatchScore}% Match</Badge>
-                )}
-              </h4>
-              <MatchDetails matchData={parsedMatchData} />
-            </div>
-          )}
           <CardFooter></CardFooter>
         </Card>
       )}
-      {
-        <AiJobMatchSection
-          jobId={job?.id}
-          aISectionOpen={aiSectionOpen}
-          triggerChange={setAiSectionOpen}
-          onMatchSaved={handleMatchSaved}
-        />
-      }
+      <AiJobMatchSection
+        jobId={job?.id}
+        aISectionOpen={aiSectionOpen}
+        triggerChange={setAiSectionOpen}
+      />
     </>
   );
 }

@@ -340,7 +340,7 @@ export const getActivityTypeList = async (
         id: true,
         label: true,
         value: true,
-        _count: { select: { Activities: true, Tasks: true } },
+        _count: { select: { Activities: true } },
       },
     });
 
@@ -366,21 +366,11 @@ export const deleteActivityTypeById = async (
       throw new Error("Not authenticated");
     }
 
-    const [activities, tasks] = await Promise.all([
-      prisma.activity.count({ where: { activityTypeId } }),
-      prisma.task.count({ where: { activityTypeId } }),
-    ]);
+    const activities = await prisma.activity.count({ where: { activityTypeId } })
 
-    if (activities > 0 || tasks > 0) {
-      const links = [
-        activities > 0 ? `${activities} activity(ies)` : "",
-        tasks > 0 ? `${tasks} task(s)` : "",
-      ]
-        .filter(Boolean)
-        .join(" and ");
-
+    if (activities > 0) {
       throw new Error(
-        `Activity type cannot be deleted because it is linked to ${links}.`,
+        `Activity type cannot be deleted because it is linked to ${activities} activity(ies).`,
       );
     }
 

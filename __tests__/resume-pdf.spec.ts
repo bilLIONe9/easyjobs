@@ -47,7 +47,7 @@ describe("htmlToPdfNodes", () => {
   it("produces a node for a <p> tag", () => {
     const nodes = htmlToPdfNodes("<p>Hello world</p>");
     expect(nodes).toHaveLength(1);
-    expect(nodes[0].props?.children).toContain("Hello world");
+    expect((nodes[0].props as any)?.children).toContain("Hello world");
   });
 
   it("applies both bold and italic for <strong><em> nesting", () => {

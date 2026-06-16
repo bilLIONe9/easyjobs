@@ -48,10 +48,7 @@ export interface JobResponse {
   Resume?: Resume;
   coverLetterId?: string;
   CoverLetter?: CoverLetter;
-  matchScore?: number | null;
-  matchData?: string | null;
   tags?: Tag[];
-  _count?: { Notes?: number };
 }
 
 export interface JobTitle {

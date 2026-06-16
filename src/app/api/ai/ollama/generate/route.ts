@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { getOllamaBaseUrl } from "@/actions/apiKey.actions";
+import { getOllamaBaseUrl } from "@/actions/userSettings.actions";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {

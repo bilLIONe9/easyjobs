@@ -151,7 +151,6 @@ export const JOB_APPLICATION_QUERY = gql`
     jobApplication(id: $id) {
       id
       currentStatus
-      cvData
       cvGenerationStatus
       coverLetter
       notes
@@ -254,7 +253,6 @@ export const UPDATE_APPLICATION = gql`
       id
       coverLetter
       notes
-      cvData
       jobProfile {
         id
         name
@@ -357,6 +355,30 @@ export const UPDATE_PROFILE_RESUME_DRAFT = gql`
 export const DELETE_PROFILE_RESUME_DRAFT = gql`
   mutation DeleteProfileResumeDraft($id: ID!) {
     deleteProfileResumeDraft(id: $id)
+  }
+`
+
+export const RESUME_DRAFT_QUERY = gql`
+  query ResumeDraft($id: ID!) {
+    resumeDraft(id: $id) {
+      id
+      jobProfileId
+      title
+      cvData
+      createdAt
+      updatedAt
+    }
+  }
+`
+
+export const UPDATE_RESUME_CV_DATA = gql`
+  mutation UpdateResumeCvData($id: ID!, $cvData: JSON!) {
+    updateResumeCvData(id: $id, cvData: $cvData) {
+      id
+      title
+      cvData
+      updatedAt
+    }
   }
 `
 

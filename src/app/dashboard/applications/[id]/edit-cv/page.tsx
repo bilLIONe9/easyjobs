@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   JOB_APPLICATION_QUERY,
-  UPDATE_APPLICATION,
   PROFILE_RESUME_DRAFTS_QUERY,
+  RESUME_DRAFT_QUERY,
+  UPDATE_RESUME_CV_DATA,
 } from '@/lib/graphql/queries'
 
 export default function EditCvPage() {
@@ -25,8 +26,15 @@ export default function EditCvPage() {
 
   const { data, loading } = useQuery(JOB_APPLICATION_QUERY, { variables: { id } })
   const app = (data as any)?.jobApplication
-
+  const resumeId = app?.resume?.id
   const profileId = app?.jobProfile?.id
+
+  const { data: resumeData, loading: resumeLoading } = useQuery(RESUME_DRAFT_QUERY, {
+    variables: { id: resumeId },
+    skip: !resumeId,
+  })
+  const linkedResume = (resumeData as any)?.resumeDraft
+
   const { data: draftsData, loading: draftsLoading } = useQuery(PROFILE_RESUME_DRAFTS_QUERY, {
     variables: { profileId },
     skip: !profileId,
@@ -34,13 +42,12 @@ export default function EditCvPage() {
   const drafts: any[] = (draftsData as any)?.profileResumeDrafts ?? []
 
   useEffect(() => {
-    if (app) {
-      setCvJson(app.cvData ? JSON.stringify(app.cvData, null, 2) : '')
+    if (linkedResume?.cvData) {
+      setCvJson(JSON.stringify(linkedResume.cvData, null, 2))
     }
-  }, [app])
+  }, [linkedResume])
 
-  const [updateApplication, { loading: saving }] = useMutation(UPDATE_APPLICATION, {
-    refetchQueries: [{ query: JOB_APPLICATION_QUERY, variables: { id } }],
+  const [updateResumeCvData, { loading: saving }] = useMutation(UPDATE_RESUME_CV_DATA, {
     onCompleted: () => {
       router.push(`/dashboard/applications/${id}`)
     },
@@ -56,6 +63,7 @@ export default function EditCvPage() {
   }
 
   const handleSave = () => {
+    if (!resumeId) return
     setCvError(null)
     let parsed: any
     try {
@@ -64,7 +72,7 @@ export default function EditCvPage() {
       setCvError('Invalid JSON — please fix the syntax before saving.')
       return
     }
-    updateApplication({ variables: { id, input: { cvData: parsed } } })
+    updateResumeCvData({ variables: { id: resumeId, cvData: parsed } })
   }
 
   if (loading) {
@@ -80,6 +88,22 @@ export default function EditCvPage() {
     return <div className="col-span-3 text-muted-foreground text-sm">Application not found.</div>
   }
 
+  if (!resumeId) {
+    return (
+      <div className="col-span-3 max-w-3xl space-y-4">
+        <Link href={`/dashboard/applications/${id}`}>
+          <Button variant="ghost" size="sm" className="gap-1">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
+        </Link>
+        <p className="text-sm text-muted-foreground">
+          No resume linked yet. Generate a CV first from the application page.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="col-span-3 max-w-3xl space-y-6">
       <div className="flex items-center gap-2">
@@ -93,7 +117,12 @@ export default function EditCvPage() {
 
       <div>
         <h1 className="text-xl font-bold">Edit CV</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{app.jobPost.title} — {app.jobPost.postedBy}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {app.jobPost.title} — {app.jobPost.postedBy}
+        </p>
+        {linkedResume && (
+          <p className="text-xs text-muted-foreground mt-1">Resume: {linkedResume.title}</p>
+        )}
       </div>
 
       {/* Clone from profile draft */}
@@ -145,7 +174,9 @@ export default function EditCvPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-semibold text-sm">CV Data (JSON)</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Edit the raw CV structure directly.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {resumeLoading ? 'Loading...' : 'Edit the raw CV structure directly.'}
+            </p>
           </div>
         </div>
         <div className="space-y-1.5">
@@ -155,6 +186,7 @@ export default function EditCvPage() {
             onChange={(e) => { setCvJson(e.target.value); setCvError(null) }}
             rows={28}
             className="font-mono text-xs"
+            disabled={resumeLoading}
             placeholder={'{\n  "contactInfo": {},\n  "summary": "",\n  "workExperiences": [],\n  "skills": []\n}'}
           />
           {cvError && <p className="text-xs text-destructive">{cvError}</p>}
@@ -165,7 +197,7 @@ export default function EditCvPage() {
         <Link href={`/dashboard/applications/${id}`}>
           <Button variant="outline" size="sm">Cancel</Button>
         </Link>
-        <Button size="sm" disabled={saving} onClick={handleSave}>
+        <Button size="sm" disabled={saving || resumeLoading} onClick={handleSave}>
           {saving ? 'Saving...' : 'Save CV'}
         </Button>
       </div>

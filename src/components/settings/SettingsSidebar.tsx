@@ -1,10 +1,10 @@
 "use client";
 
-import { Bot, Key, Palette } from "lucide-react";
+import { Bot, Palette } from "lucide-react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 
-export type SettingsSection = "ai-provider" | "api-keys" | "appearance";
+export type SettingsSection = "ai-provider" | "appearance";
 
 const SETTINGS_SECTIONS: {
   id: SettingsSection;
@@ -12,7 +12,6 @@ const SETTINGS_SECTIONS: {
   icon: typeof Bot;
 }[] = [
   { id: "ai-provider", label: "AI Provider", icon: Bot },
-  { id: "api-keys", label: "API Keys", icon: Key },
   { id: "appearance", label: "Appearance", icon: Palette },
 ];
 

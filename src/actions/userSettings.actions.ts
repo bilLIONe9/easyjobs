@@ -130,3 +130,18 @@ export const updateDisplaySettings = async (
 ): Promise<any | undefined> => {
   return updateUserSettings({ display: displaySettings });
 };
+
+export const getOllamaBaseUrl = async (): Promise<string> => {
+  const envUrl = process.env.OLLAMA_BASE_URL
+  if (envUrl) return envUrl.replace(/\/+$/, '')
+
+  try {
+    const result = await getUserSettings()
+    const url = result?.data?.settings?.ai?.ollamaBaseUrl
+    if (url) return (url as string).replace(/\/+$/, '')
+  } catch {
+    // fall through to default
+  }
+
+  return 'http://localhost:11434'
+}
