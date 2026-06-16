@@ -253,6 +253,7 @@ model JobProfile {
   userId        String
   user          User             @relation(fields: [userId], references: [id])
   name          String
+  email         String
   linkedin      String?
   phone         String?
   github        String?

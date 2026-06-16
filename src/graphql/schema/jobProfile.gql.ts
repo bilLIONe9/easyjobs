@@ -2,6 +2,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
   type JobProfile {
     id: ID!
     name: String!
+    email: String!
     linkedin: String
     phone: String
     github: String
@@ -41,6 +42,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
 
   input CreateJobProfileInput {
     name: String!
+    email: String!
     linkedin: String
     phone: String
     github: String
@@ -52,6 +54,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
 
   input UpdateJobProfileInput {
     name: String
+    email: String
     linkedin: String
     phone: String
     github: String

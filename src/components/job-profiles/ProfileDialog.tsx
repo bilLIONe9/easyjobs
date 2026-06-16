@@ -10,6 +10,7 @@ import { CREATE_JOB_PROFILE, UPDATE_JOB_PROFILE, JOB_PROFILES_QUERY } from '@/li
 
 interface ProfileForm {
   name: string
+  email: string
   linkedin: string
   phone: string
   github: string
@@ -29,6 +30,7 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
     defaultValues: editProfile
       ? {
           name: editProfile.name,
+          email: editProfile.email ?? '',
           linkedin: editProfile.linkedin ?? '',
           phone: editProfile.phone ?? '',
           github: editProfile.github ?? '',
@@ -37,7 +39,7 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
           details: editProfile.details ?? '',
           isDefault: editProfile.isDefault ?? false,
         }
-      : { name: '', linkedin: '', phone: '', github: '', location: '', description: '', details: '', isDefault: false },
+      : { name: '', email: '', linkedin: '', phone: '', github: '', location: '', description: '', details: '', isDefault: false },
   })
 
   const [create] = useMutation(CREATE_JOB_PROFILE, { refetchQueries: [JOB_PROFILES_QUERY] })
@@ -52,6 +54,7 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
       location: data.location || null,
       description: data.description || null,
       details: data.details || null,
+      email: data.email,
     }
     if (editProfile) {
       await update({ variables: { id: editProfile.id, input } })
@@ -66,6 +69,10 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
       <div className="grid gap-1.5">
         <Label>Profile Name *</Label>
         <Input {...register('name', { required: true })} placeholder="e.g. Software Engineer Profile" />
+      </div>
+      <div className="grid gap-1.5">
+        <Label>Email *</Label>
+        <Input {...register('email', { required: true })} type="email" placeholder="you@example.com" />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="grid gap-1.5">

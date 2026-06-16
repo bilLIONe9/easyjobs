@@ -45,8 +45,8 @@ const mockEducations: Education[] = [
     degree: "Bachelor's",
     fieldOfStudy: "Computer Science",
     location: "Stanford, CA",
-    startDate: new Date("2018-09-01"),
-    endDate: new Date("2022-06-01"),
+    startDate: "2018-09-01",
+    endDate: "2022-06-01",
     description: "Studied computer science",
   },
 ];

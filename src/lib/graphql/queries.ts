@@ -300,6 +300,7 @@ export const JOB_PROFILES_QUERY = gql`
     jobProfiles {
       id
       name
+      email
       linkedin
       phone
       github
@@ -381,6 +382,7 @@ export const UPDATE_JOB_PROFILE = gql`
     updateJobProfile(id: $id, input: $input) {
       id
       name
+      email
       linkedin
       phone
       github

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft, Download, Loader, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { Resume, SkillCategory } from "@/models/profile.model";
@@ -11,47 +12,43 @@ import SkillsCard from "./SkillsCard";
 import ExperienceCard from "./ExperienceCard";
 import EducationCard from "./EducationCard";
 import CertificationCard from "./CertificationCard";
-import { generateResumePdfBlob, sanitizeFilename } from "./resume-pdf/generateResumePdf";
+import { generateResumePdfBlob } from "./resume-pdf/generateResumePdf";
+import type { ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
 import { toast } from "../ui/use-toast";
+
+// Dynamically import the PDF viewer so @react-pdf/renderer never runs on the server
+const PdfViewerPanel = dynamic(
+  () => import("./resume-pdf/PdfViewerPanel").then((m) => ({ default: m.PdfViewerPanel })),
+  { ssr: false },
+);
 
 // ─── PDF preview ──────────────────────────────────────────────────────────────
 
 function PdfPanel({ resume }: { resume: Resume }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [generating, setGenerating] = useState(false);
-  const activeUrl = useRef<string | null>(null);
+  const [htmlNodes, setHtmlNodes] = useState<ResumeHtmlNodes | null>(null);
 
   useEffect(() => {
-    setGenerating(true);
-    generateResumePdfBlob(resume)
-      .then(({ blob }) => {
-        const url = URL.createObjectURL(blob);
-        if (activeUrl.current) URL.revokeObjectURL(activeUrl.current);
-        activeUrl.current = url;
-        setBlobUrl(url);
-      })
-      .catch(() => {})
-      .finally(() => setGenerating(false));
-  // Resume title + updatedAt are enough to detect any save — avoids deep comparison
+    import("./resume-pdf/html-to-pdf").then(({ htmlToPdfNodes }) => {
+      setHtmlNodes({
+        summary: resume.summary ? htmlToPdfNodes(resume.summary) : [],
+        experiences: resume.experiences?.map((e) => e.description ? htmlToPdfNodes(e.description) : []) ?? [],
+        educations: resume.educations?.map((e) => e.description ? htmlToPdfNodes(e.description) : []) ?? [],
+      });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resume.id, String(resume.updatedAt)]);
 
-  useEffect(() => () => { if (activeUrl.current) URL.revokeObjectURL(activeUrl.current) }, []);
+  if (!htmlNodes) {
+    return (
+      <div className="h-full rounded-lg border bg-muted flex items-center justify-center">
+        <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
-    <div className="relative h-full rounded-lg border bg-muted overflow-hidden">
-      {generating && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-          <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
-      {blobUrl ? (
-        <iframe src={blobUrl} className="w-full h-full" title="Resume PDF preview" />
-      ) : !generating ? (
-        <div className="h-full flex items-center justify-center text-sm text-muted-foreground px-6 text-center">
-          Add some content to see your resume preview.
-        </div>
-      ) : null}
+    <div className="h-full rounded-lg border overflow-hidden shadow-sm">
+      <PdfViewerPanel resume={resume} htmlNodes={htmlNodes} />
     </div>
   );
 }
@@ -129,7 +126,7 @@ export function ResumePageView({ resume }: { resume: Resume }) {
               {!contactInfo && (
                 <button
                   type="button"
-                  onClick={() => sectionRef.current?.openContactInfoDialog({ firstName: "", lastName: "", headline: "" })}
+                  onClick={() => sectionRef.current?.openContactInfoDialog({ firstName: "", lastName: "", email: "" })}
                   className="w-full rounded-lg border border-dashed p-3 text-sm text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors text-left"
                 >
                   + Add contact info

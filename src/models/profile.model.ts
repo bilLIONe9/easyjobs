@@ -19,10 +19,12 @@ export interface Resume {
 export interface ContactInfo {
   firstName: string;
   lastName: string;
-  headline: string;
-  email?: string;
+  email: string;
+  headline?: string;
   phone?: string;
   address?: string;
+  github?: string;
+  linkedin?: string;
 }
 
 export interface SkillCategory {

@@ -24,6 +24,11 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
     contactInfo?.address,
   ].filter(Boolean);
 
+  const linkParts = [
+    contactInfo?.linkedin,
+    contactInfo?.github,
+  ].filter(Boolean);
+
   return (
     <Document
       author={`${contactInfo?.firstName ?? ""} ${contactInfo?.lastName ?? ""}`.trim()}
@@ -43,6 +48,9 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
             ) : null}
             {contactParts.length > 0 ? (
               <Text style={styles.contactLine}>{contactParts.join(" · ")}</Text>
+            ) : null}
+            {linkParts.length > 0 ? (
+              <Text style={styles.contactLine}>{linkParts.join(" · ")}</Text>
             ) : null}
           </View>
         )}

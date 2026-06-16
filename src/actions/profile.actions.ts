@@ -124,10 +124,12 @@ export const saveContactInfo = async (
         contactInfo: {
           firstName: data.firstName,
           lastName: data.lastName,
-          headline: data.headline,
           email: data.email,
-          phone: data.phone,
-          address: data.address ?? null,
+          headline: data.headline || null,
+          phone: data.phone || null,
+          address: data.address || null,
+          github: data.github || null,
+          linkedin: data.linkedin || null,
         },
       },
     });
