@@ -109,7 +109,8 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                 </Text>
                 <Text style={styles.entryMeta}>
                   {edu.startDate} –{" "}
-                  {edu.endDate ? edu.endDate : "Present"} ·{" "}
+                  {edu.endDate ? edu.endDate : "Present"}
+                  {edu.cgpa ? ` · GPA: ${edu.cgpa}` : ""} ·{" "}
                   {edu.location}
                 </Text>
                 {htmlNodes.educations[i]}

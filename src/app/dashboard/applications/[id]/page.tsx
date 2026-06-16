@@ -355,13 +355,9 @@ export default function ApplicationDetailPage() {
           <CVActionButton
             applicationId={app.id}
             initialStatus={app.cvGenerationStatus}
-            hasCvData={!!app.cvData}
+            resume={app.resume}
+            jobProfileId={app.jobProfile?.id}
           />
-          {!app.cvData && !app.cvGenerationStatus && !app.jobProfile && (
-            <p className="text-xs text-muted-foreground">
-              Select a job profile to use profile resume drafts when editing manually.
-            </p>
-          )}
         </div>
 
         {/* Job Profile */}

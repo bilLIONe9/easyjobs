@@ -376,6 +376,7 @@ export const addEducation = async (
       location: data.location,
       startDate: data.startDate,
       endDate: data.endDate ?? null,
+      cgpa: data.cgpa ?? null,
       description: data.description ?? null,
     };
     const updated = [...educations, newEdu];
@@ -414,6 +415,7 @@ export const updateEducation = async (
             location: data.location,
             startDate: data.startDate,
             endDate: data.endDate ?? null,
+            cgpa: data.cgpa ?? null,
             description: data.description ?? null,
           }
         : e,

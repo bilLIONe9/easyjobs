@@ -44,6 +44,7 @@ function EducationCard({ educations, openDialogForEdit }: EducationCardProps) {
             <CardDescription>
               {format(new Date(edu.startDate), "MMM yyyy")} -{" "}
               {edu.endDate ? format(new Date(edu.endDate), "MMM yyyy") : "Present"}
+              {edu.cgpa && <> · GPA: {edu.cgpa}</>}
               <br />
               {edu.location}
             </CardDescription>

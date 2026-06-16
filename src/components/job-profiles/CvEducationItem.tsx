@@ -21,10 +21,12 @@ export function CvEducationItem({ value, onChange, onRemove }: Props) {
         <Input className="text-xs h-7" placeholder="Degree" {...field('degree')} />
         <Input className="text-xs h-7" placeholder="Field of study" {...field('fieldOfStudy')} />
       </div>
+      <Input className="text-xs h-7" placeholder="Location (optional)" {...field('location')} />
       <div className="grid grid-cols-2 gap-2">
         <Input className="text-xs h-7" placeholder="Start year" {...field('startDate')} />
         <Input className="text-xs h-7" placeholder="End year (optional)" {...field('endDate')} />
       </div>
+      <Input className="text-xs h-7" placeholder="GPA / CGPA (optional, e.g. 3.76/4.0)" {...field('cgpa')} />
       <Button
         variant="ghost"
         size="sm"

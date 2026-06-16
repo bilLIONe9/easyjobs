@@ -20,7 +20,6 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { DatePicker } from "../DatePicker";
 import { Switch } from "../ui/switch";
 import TiptapEditor from "../TiptapEditor";
 import { Button } from "../ui/button";
@@ -59,10 +58,14 @@ function AddEducation({
       institution: "",
       degree: "",
       fieldOfStudy: "",
+      location: "",
+      startDate: "",
+      endDate: "",
+      cgpa: "",
     },
   });
 
-  const { watch, reset, formState, resetField } = form;
+  const { watch, reset, setValue, formState } = form;
   const degreeCompletedValue = watch("degreeCompleted");
 
   useEffect(() => {
@@ -76,8 +79,9 @@ function AddEducation({
           degree: educationToEdit.degree,
           fieldOfStudy: educationToEdit.fieldOfStudy,
           location: educationToEdit.location,
-          startDate: new Date(educationToEdit.startDate),
-          endDate: educationToEdit.endDate ? new Date(educationToEdit.endDate) : null,
+          startDate: String(educationToEdit.startDate),
+          endDate: educationToEdit.endDate ? String(educationToEdit.endDate) : "",
+          cgpa: educationToEdit.cgpa ?? "",
           description: educationToEdit.description,
           degreeCompleted: !!educationToEdit.endDate,
         },
@@ -85,14 +89,14 @@ function AddEducation({
       );
     } else {
       reset(
-        { resumeId, degreeCompleted: true, institution: "", degree: "", fieldOfStudy: "" },
+        { resumeId, degreeCompleted: true, institution: "", degree: "", fieldOfStudy: "", location: "", startDate: "", endDate: "", cgpa: "" },
         { keepDefaultValues: true },
       );
     }
   }, [dialogOpen, educationToEdit, educationIndex, resumeId, reset]);
 
   const onDegreeCompleted = (completed: boolean) => {
-    if (completed) resetField("endDate");
+    if (!completed) setValue("endDate", "");
   };
 
   const onSubmit = (data: z.infer<typeof AddEducationFormSchema>) => {
@@ -188,28 +192,38 @@ function AddEducation({
               />
             </div>
 
-            <div className="flex flex-col">
+            <div>
               <FormField
                 control={form.control}
                 name="startDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Start Date</FormLabel>
-                    <DatePicker field={field} presets={false} isEnabled={true} captionLayout={true} />
+                    <FormLabel>Start Year</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. 2018" maxLength={4} />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            <div className="flex flex-col">
+            <div>
               <FormField
                 control={form.control}
                 name="endDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>End Date</FormLabel>
-                    <DatePicker field={field} presets={false} isEnabled={!!degreeCompletedValue} captionLayout={true} />
+                    <FormLabel>End Year</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        value={field.value ?? ""}
+                        placeholder="e.g. 2022"
+                        maxLength={4}
+                        disabled={!degreeCompletedValue}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -229,6 +243,22 @@ function AddEducation({
                     <FormLabel className="flex items-center ml-4 mb-2">
                       {field.value ? "Degree Completed" : "Currently Studying"}
                     </FormLabel>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div>
+              <FormField
+                control={form.control}
+                name="cgpa"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>GPA / CGPA <span className="text-xs text-muted-foreground font-normal">(optional)</span></FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="e.g. 3.76/4.0" />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

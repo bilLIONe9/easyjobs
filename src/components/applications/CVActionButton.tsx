@@ -1,63 +1,129 @@
 'use client'
-import { useRouter } from 'next/navigation'
-import { useMutation } from '@apollo/client/react'
-import { Sparkles, Loader2, CheckCircle2, XCircle, ChevronDown, Pencil } from 'lucide-react'
+import Link from 'next/link'
+import { useMutation, useLazyQuery } from '@apollo/client/react'
+import {
+  Sparkles, Loader2, CheckCircle2, XCircle,
+  ChevronDown, FileText, Pencil, Copy,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { GENERATE_CV, JOB_APPLICATION_QUERY } from '@/lib/graphql/queries'
+import {
+  GENERATE_CV,
+  JOB_APPLICATION_QUERY,
+  UPDATE_APPLICATION,
+  PROFILE_RESUME_DRAFTS_QUERY,
+} from '@/lib/graphql/queries'
 
-interface CVActionButtonProps {
+interface Props {
   applicationId: string
+  jobProfileId?: string | null
+  resume?: { id: string; title: string } | null
   initialStatus?: string | null
-  hasCvData: boolean
 }
 
-export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVActionButtonProps) {
-  const router = useRouter()
-  const goToEditCv = () => router.push(`/dashboard/applications/${applicationId}/edit-cv`)
+function CloneFromProfileButton({
+  jobProfileId,
+  drafts,
+  loading,
+  onOpen,
+  onSelect,
+}: {
+  jobProfileId: string
+  drafts: any[]
+  loading: boolean
+  onOpen: () => void
+  onSelect: (id: string) => void
+}) {
+  return (
+    <DropdownMenu onOpenChange={(open) => { if (open) onOpen() }}>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5" disabled={loading}>
+          {loading
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Copy className="h-3.5 w-3.5" />}
+          Clone from Profile
+          <ChevronDown className="h-3 w-3" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="max-w-[240px]">
+        {loading ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground flex items-center gap-1.5">
+            <Loader2 className="h-3 w-3 animate-spin" /> Loading drafts…
+          </div>
+        ) : drafts.length === 0 ? (
+          <div className="px-2 py-1.5 text-xs text-muted-foreground">No resume drafts on this profile.</div>
+        ) : (
+          drafts.map((d: any) => (
+            <DropdownMenuItem key={d.id} onClick={() => onSelect(d.id)}>
+              <FileText className="h-3.5 w-3.5 mr-2 shrink-0" />
+              <span className="truncate">{d.title}</span>
+            </DropdownMenuItem>
+          ))
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+export function CVActionButton({ applicationId, jobProfileId, resume, initialStatus }: Props) {
+  const refetchQueries = [{ query: JOB_APPLICATION_QUERY, variables: { id: applicationId } }]
+
+  const [loadDrafts, { data: draftsData, loading: draftsLoading }] = useLazyQuery(
+    PROFILE_RESUME_DRAFTS_QUERY,
+  )
 
   const [generateCV, { loading: generating }] = useMutation(GENERATE_CV, {
     variables: { applicationId },
-    refetchQueries: [{ query: JOB_APPLICATION_QUERY, variables: { id: applicationId } }],
+    refetchQueries,
   })
 
-  if (initialStatus === 'pending' || initialStatus === 'generating' || initialStatus === 'queued') {
+  const [linkResume, { loading: linking }] = useMutation(UPDATE_APPLICATION, {
+    refetchQueries,
+  })
+
+  const cloneFromDraft = (draftId: string) => {
+    linkResume({ variables: { id: applicationId, input: { resumeId: draftId } } })
+  }
+
+  const drafts = (draftsData as any)?.profileResumeDrafts ?? []
+  const cloneLoading = draftsLoading || linking
+
+  // ── In progress ──────────────────────────────────────────────────────────────
+  if (initialStatus === 'pending' || initialStatus === 'queued' || initialStatus === 'generating') {
     return (
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          {initialStatus === 'generating' ? 'Generating CV...' : 'Queued...'}
-        </div>
-        <Button variant="ghost" size="sm" className="gap-1.5" onClick={goToEditCv}>
-          <Pencil className="h-3.5 w-3.5" />
-          Edit Manually
-        </Button>
+      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        {initialStatus === 'generating' ? 'Generating resume…' : 'Queued…'}
       </div>
     )
   }
 
-  if (initialStatus === 'done' || hasCvData) {
+  // ── Has resume ───────────────────────────────────────────────────────────────
+  if (resume) {
     return (
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-sm text-green-600">
-          <CheckCircle2 className="h-4 w-4" />
-          CV Ready
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-sm text-green-600 min-w-0">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span className="truncate text-foreground font-medium">{resume.title}</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={goToEditCv}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit Manually
+        <div className="flex items-center gap-1 shrink-0">
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <Link href={`/dashboard/profile/resume/${resume.id}`}>
+              <Pencil className="h-3.5 w-3.5" />
+              Edit Resume
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={generating}>
-                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+              <Button variant="ghost" size="icon" className="h-8 w-8" disabled={generating}>
+                {generating
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <ChevronDown className="h-4 w-4" />}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -72,11 +138,12 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
     )
   }
 
+  // ── Generation failed ─────────────────────────────────────────────────────
   if (initialStatus === 'failed') {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-destructive">CV generation failed.</p>
-        <div className="flex items-center gap-2">
+        <p className="text-xs text-destructive">Resume generation failed.</p>
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -84,38 +151,53 @@ export function CVActionButton({ applicationId, initialStatus, hasCvData }: CVAc
             disabled={generating}
             onClick={() => generateCV()}
           >
-            {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-4 w-4" />}
-            Retry AI Generation
+            {generating
+              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              : <XCircle className="h-3.5 w-3.5" />}
+            Retry with AI
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={goToEditCv}>
-            <Pencil className="h-3.5 w-3.5" />
-            Edit Manually
-          </Button>
+          {jobProfileId && (
+            <CloneFromProfileButton
+              jobProfileId={jobProfileId}
+              drafts={drafts}
+              loading={cloneLoading}
+              onOpen={() => loadDrafts({ variables: { profileId: jobProfileId } })}
+              onSelect={cloneFromDraft}
+            />
+          )}
         </div>
       </div>
     )
   }
 
+  // ── No resume ────────────────────────────────────────────────────────────────
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5" disabled={generating}>
-          {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          Create CV
-          <ChevronDown className="h-3.5 w-3.5" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuItem onClick={() => generateCV()}>
-          <Sparkles className="h-4 w-4 mr-2" />
-          Generate with AI
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={goToEditCv}>
-          <Pencil className="h-4 w-4 mr-2" />
-          Edit Manually
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        disabled={generating}
+        onClick={() => generateCV()}
+      >
+        {generating
+          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          : <Sparkles className="h-3.5 w-3.5" />}
+        Generate with AI
+      </Button>
+      {jobProfileId ? (
+        <CloneFromProfileButton
+          jobProfileId={jobProfileId}
+          drafts={drafts}
+          loading={cloneLoading}
+          onOpen={() => loadDrafts({ variables: { profileId: jobProfileId } })}
+          onSelect={cloneFromDraft}
+        />
+      ) : (
+        <p className="text-xs text-muted-foreground self-center">
+          Assign a job profile to clone from profile drafts.
+        </p>
+      )}
+    </div>
   )
 }

@@ -49,6 +49,7 @@ export interface Education {
   location: string;
   startDate:  string;
   endDate?: string | null;
+  cgpa?: string;
   description?: string;
 }
 
