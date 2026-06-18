@@ -26,7 +26,7 @@ import { getAllJobLocations } from '@/actions/jobLocation.actions'
 import { createLocation } from '@/actions/job.actions'
 import { getJobSourceList } from '@/actions/jobSource.actions'
 import { JOB_TYPES } from '@/models/job.model'
-import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, CHECK_DUPLICATE_JOB_POSTS } from '@/lib/graphql/queries'
+import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, JOB_POST_QUERY, CHECK_DUPLICATE_JOB_POSTS } from '@/lib/graphql/queries'
 import TiptapEditor from '@/components/TiptapEditor'
 import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -174,7 +174,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
   }, [titleValue, companyValue, companies]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [createPost] = useMutation(CREATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
-  const [updatePost] = useMutation(UPDATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
+  const [updatePost] = useMutation(UPDATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY, JOB_POST_QUERY] })
 
   const onSubmit = async (data: FormData) => {
     const selectedCompany = companies.find((c) => c.id === data.company)

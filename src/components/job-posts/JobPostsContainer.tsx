@@ -324,11 +324,11 @@ export function JobPostsContainer() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* List */}
       {loading && posts.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-lg" />
+        <div className="flex flex-col gap-1.5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-lg" />
           ))}
         </div>
       ) : posts.length === 0 ? (
@@ -339,7 +339,7 @@ export function JobPostsContainer() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-1.5">
           {posts.map((post: any) => (
             <JobPostCard key={post.id} post={post} onSaved={() => refetch()} />
           ))}
