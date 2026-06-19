@@ -17,6 +17,11 @@ export const JOB_POSTS_QUERY = gql`
         applicationCount
         savedProfileIds
         createdAt
+        tags {
+          id
+          label
+          value
+        }
       }
       total
       page
@@ -42,6 +47,11 @@ export const JOB_POST_QUERY = gql`
       applicationCount
       createdAt
       updatedAt
+      tags {
+        id
+        label
+        value
+      }
     }
   }
 `
@@ -95,6 +105,39 @@ export const SET_JOB_POST_STATUS = gql`
 export const DELETE_JOB_POST = gql`
   mutation DeleteJobPost($id: ID!) {
     deleteJobPost(id: $id)
+  }
+`
+
+export const JOB_POST_TAGS_QUERY = gql`
+  query JobPostTags {
+    jobPostTags {
+      id
+      label
+      value
+    }
+  }
+`
+
+export const CREATE_JOB_POST_TAG = gql`
+  mutation CreateJobPostTag($label: String!) {
+    createJobPostTag(label: $label) {
+      id
+      label
+      value
+    }
+  }
+`
+
+export const SET_JOB_POST_TAGS = gql`
+  mutation SetJobPostTags($jobPostId: ID!, $tagIds: [ID!]!) {
+    setJobPostTags(jobPostId: $jobPostId, tagIds: $tagIds) {
+      id
+      tags {
+        id
+        label
+        value
+      }
+    }
   }
 `
 
@@ -169,6 +212,7 @@ export const JOB_APPLICATION_QUERY = gql`
       jobProfile {
         id
         name
+        email
         linkedin
         github
         phone
@@ -295,6 +339,24 @@ export const GENERATE_CV = gql`
 
 // ─── Job Profiles ─────────────────────────────────────────────────────────────
 
+export const JOB_PROFILE_QUERY = gql`
+  query JobProfile($id: ID!) {
+    jobProfile(id: $id) {
+      id
+      name
+      email
+      linkedin
+      phone
+      github
+      location
+      description
+      isDefault
+      applicationCount
+      resumeDraftCount
+    }
+  }
+`
+
 export const JOB_PROFILES_QUERY = gql`
   query JobProfiles {
     jobProfiles {
@@ -363,6 +425,23 @@ export const RESUME_DRAFT_QUERY = gql`
   query ResumeDraft($id: ID!) {
     resumeDraft(id: $id) {
       ${RESUME_DRAFT_FIELDS}
+    }
+  }
+`
+
+export const RESUME_LINKED_APPLICATIONS_QUERY = gql`
+  query ResumeLinkedApplications($resumeId: ID!) {
+    jobApplications(filter: { resumeId: $resumeId }, limit: 50) {
+      items {
+        id
+        currentStatus
+        createdAt
+        jobPost {
+          id
+          title
+          postedBy
+        }
+      }
     }
   }
 `

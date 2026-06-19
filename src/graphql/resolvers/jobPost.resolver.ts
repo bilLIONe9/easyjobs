@@ -6,7 +6,7 @@ export const jobPostResolvers = {
   Query: {
     jobPosts: async (
       _: unknown,
-      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[]; location?: string }; page?: number; limit?: number },
+      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[]; location?: string; tags?: string[] }; page?: number; limit?: number },
       ctx: GraphQLContext,
     ) => {
       const userId = requireAuth(ctx.userId)
@@ -25,6 +25,9 @@ export const jobPostResolvers = {
       }
       if (filter?.location) where.locations = { has: filter.location }
       if (filter?.startDate) where.postedAt = { gte: new Date(filter.startDate) }
+      if (filter?.tags?.length) {
+        where.tags = { some: { value: { in: filter.tags } } }
+      }
       if (filter?.excludeProfileIds?.length) {
         const saved = await ctx.prisma.jobApplication.findMany({
           where: { userId, jobProfileId: { in: filter.excludeProfileIds } },
@@ -40,6 +43,7 @@ export const jobPostResolvers = {
           include: {
             _count: { select: { applications: true } },
             applications: { select: { jobProfileId: true } },
+            tags: true,
           },
         }),
         ctx.prisma.jobPost.count({ where }),
@@ -50,7 +54,10 @@ export const jobPostResolvers = {
 
     jobPost: async (_: unknown, args: { id: string }, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
-      return ctx.prisma.jobPost.findFirst({ where: { id: args.id, userId }, include: { applications: true } })
+      return ctx.prisma.jobPost.findFirst({
+        where: { id: args.id, userId },
+        include: { applications: true, tags: true },
+      })
     },
 
     checkDuplicateJobPosts: async (
@@ -68,6 +75,7 @@ export const jobPostResolvers = {
         },
         orderBy: { postedAt: 'desc' },
         take: 5,
+        include: { tags: true },
       })
     },
 
@@ -82,32 +90,75 @@ export const jobPostResolvers = {
       ])
       return { total, active, closed, inappropriate, savedToApply }
     },
+
+    jobPostTags: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+      requireAuth(ctx.userId)
+      return ctx.prisma.jobPostTag.findMany({ orderBy: { label: 'asc' } })
+    },
   },
 
   Mutation: {
     createJobPost: async (_: unknown, args: { input: any }, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
+      const { tagIds, ...rest } = args.input
       return ctx.prisma.jobPost.create({
-        data: { ...args.input, userId, postedAt: new Date(args.input.postedAt) },
+        data: {
+          ...rest,
+          userId,
+          postedAt: new Date(rest.postedAt),
+          ...(tagIds?.length ? { tags: { connect: tagIds.map((id: string) => ({ id })) } } : {}),
+        },
+        include: { tags: true },
       })
     },
 
     updateJobPost: async (_: unknown, args: { id: string; input: any }, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
-      const data: any = { ...args.input }
+      const { tagIds, ...rest } = args.input
+      const data: any = { ...rest }
       if (data.postedAt) data.postedAt = new Date(data.postedAt)
-      return ctx.prisma.jobPost.update({ where: { id: args.id, userId }, data })
+      if (tagIds !== undefined) {
+        data.tags = { set: tagIds.map((id: string) => ({ id })) }
+      }
+      return ctx.prisma.jobPost.update({
+        where: { id: args.id, userId },
+        data,
+        include: { tags: true },
+      })
     },
 
     setJobPostStatus: async (_: unknown, args: { id: string; status: string }, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
-      return ctx.prisma.jobPost.update({ where: { id: args.id, userId }, data: { status: args.status } })
+      return ctx.prisma.jobPost.update({
+        where: { id: args.id, userId },
+        data: { status: args.status },
+        include: { tags: true },
+      })
     },
 
     deleteJobPost: async (_: unknown, args: { id: string }, ctx: GraphQLContext) => {
       const userId = requireAuth(ctx.userId)
       await ctx.prisma.jobPost.delete({ where: { id: args.id, userId } })
       return true
+    },
+
+    createJobPostTag: async (_: unknown, args: { label: string }, ctx: GraphQLContext) => {
+      requireAuth(ctx.userId)
+      const value = args.label.toLowerCase().trim().replace(/\s+/g, '-')
+      return ctx.prisma.jobPostTag.upsert({
+        where: { value },
+        update: {},
+        create: { label: args.label.trim(), value },
+      })
+    },
+
+    setJobPostTags: async (_: unknown, args: { jobPostId: string; tagIds: string[] }, ctx: GraphQLContext) => {
+      const userId = requireAuth(ctx.userId)
+      return ctx.prisma.jobPost.update({
+        where: { id: args.jobPostId, userId },
+        data: { tags: { set: args.tagIds.map((id) => ({ id })) } },
+        include: { tags: true },
+      })
     },
   },
 
@@ -119,8 +170,15 @@ export const jobPostResolvers = {
       if (parent.applications) return parent.applications
       return ctx.prisma.jobApplication.findMany({ where: { jobPostId: parent.id } })
     },
+    tags: (parent: any) => parent.tags ?? [],
     postedAt: (parent: any) => parent.postedAt instanceof Date ? parent.postedAt.toISOString() : parent.postedAt,
     createdAt: (parent: any) => parent.createdAt instanceof Date ? parent.createdAt.toISOString() : parent.createdAt,
     updatedAt: (parent: any) => parent.updatedAt instanceof Date ? parent.updatedAt.toISOString() : parent.updatedAt,
+  },
+
+  JobPostTag: {
+    id: (parent: any) => parent.id,
+    label: (parent: any) => parent.label,
+    value: (parent: any) => parent.value,
   },
 }

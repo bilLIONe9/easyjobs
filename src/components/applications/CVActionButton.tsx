@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { useMutation, useLazyQuery } from '@apollo/client/react'
 import {
   Sparkles, Loader2, CheckCircle2, XCircle,
-  ChevronDown, FileText, Pencil, Copy,
+  ChevronDown, FileText, Copy,
+  ExternalLink,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -113,9 +114,9 @@ export function CVActionButton({ applicationId, jobProfileId, resume, initialSta
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Button variant="outline" size="sm" className="gap-1.5" asChild>
-            <Link href={`/dashboard/profile/resume/${resume.id}`}>
-              <Pencil className="h-3.5 w-3.5" />
-              Edit Resume
+            <Link href={`/dashboard/profile/resume/${resume.id}`} target='_blank'>
+              <ExternalLink className="h-3.5 w-3.5" />
+              View Resume
             </Link>
           </Button>
           <DropdownMenu>

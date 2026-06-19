@@ -5,13 +5,10 @@ import { TipTapContentViewer } from "../TipTapContentViewer";
 
 interface SummarySectionCardProps {
   summary: string;
-  openDialogForEdit: () => void;
+  onEdit: () => void;
 }
 
-function SummarySectionCard({
-  summary,
-  openDialogForEdit,
-}: SummarySectionCardProps) {
+function SummarySectionCard({ summary, onEdit }: SummarySectionCardProps) {
   return (
     <Card>
       <CardHeader className="flex-row justify-between relative">
@@ -20,7 +17,7 @@ function SummarySectionCard({
           variant="ghost"
           size="sm"
           className="h-8 gap-1 absolute top-0 right-1"
-          onClick={openDialogForEdit}
+          onClick={onEdit}
         >
           <Edit className="h-3.5 w-3.5" />
           <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">

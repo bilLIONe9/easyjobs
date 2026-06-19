@@ -1,10 +1,11 @@
 'use client'
 import React, { useState, useEffect } from 'react'
+import dynamic from 'next/dynamic'
 import { useQuery, useMutation } from '@apollo/client/react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { ArrowLeft, MapPin, DollarSign, ExternalLink, Calendar, Plus, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, MapPin, DollarSign, ExternalLink, Calendar, Plus, Pencil, Trash2, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -21,6 +22,11 @@ import {
   UPDATE_APPLICATION,
   DELETE_APPLICATION_QUESTION,
 } from '@/lib/graphql/queries'
+
+const CoverLetterPdfDialog = dynamic(
+  () => import('@/components/applications/CoverLetterPdfDialog').then((m) => ({ default: m.CoverLetterPdfDialog })),
+  { ssr: false },
+)
 
 const APPLICATION_STATUSES = [
   'saved', 'applied', 'phone_screen', 'interview', 'technical_test', 'offer', 'rejected', 'withdrawn',
@@ -231,6 +237,7 @@ export default function ApplicationDetailPage() {
   const [coverLetter, setCoverLetter] = useState('')
   const [notes, setNotes] = useState('')
   const [editingCoverLetter, setEditingCoverLetter] = useState(false)
+  const [showCoverLetterPdf, setShowCoverLetterPdf] = useState(false)
 
   // Add-question form visibility
   const [addingQuestion, setAddingQuestion] = useState(false)
@@ -375,20 +382,20 @@ export default function ApplicationDetailPage() {
         </div>
       </div>
 
-      {/* CV Preview */}
-      {app.cvData && (
-        <div className="rounded-lg border bg-card p-4 space-y-3">
-          <h2 className="font-semibold text-sm">CV Preview</h2>
-          <CVDataView data={app.cvData} />
-        </div>
-      )}
-
       {/* Cover Letter & Notes */}
       <div className="rounded-lg border bg-card p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm">Cover Letter & Notes</h2>
           {!editingCoverLetter ? (
-            <Button variant="ghost" size="sm" onClick={() => setEditingCoverLetter(true)}>Edit</Button>
+            <div className="flex items-center gap-1">
+              {app.coverLetter && (
+                <Button variant="ghost" size="sm" className="gap-1" onClick={() => setShowCoverLetterPdf(true)}>
+                  <Download className="h-3.5 w-3.5" />
+                  PDF
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={() => setEditingCoverLetter(true)}>Edit</Button>
+            </div>
           ) : (
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" onClick={() => setEditingCoverLetter(false)}>Cancel</Button>
@@ -422,6 +429,34 @@ export default function ApplicationDetailPage() {
           </>
         )}
       </div>
+
+      {showCoverLetterPdf && app.coverLetter && (
+        <CoverLetterPdfDialog
+          open={showCoverLetterPdf}
+          onOpenChange={setShowCoverLetterPdf}
+          coverLetter={app.coverLetter}
+          profile={{
+            name: app.jobProfile?.name ?? '',
+            email: app.jobProfile?.email,
+            phone: app.jobProfile?.phone,
+            linkedin: app.jobProfile?.linkedin,
+            github: app.jobProfile?.github,
+            location: app.jobProfile?.location,
+          }}
+          job={{
+            title: app.jobPost.title,
+            companyName: app.jobPost.postedBy,
+            companyLocation: app.jobPost.locations?.[0],
+          }}
+          date={format(new Date(), 'MMMM d, yyyy')}
+          filename={[
+            app.jobProfile?.name,
+            app.jobPost.postedBy,
+            'coverletter',
+            format(new Date(), 'dMMM'),
+          ].filter(Boolean).join('_').replace(/\s+/g, '') + '.pdf'}
+        />
+      )}
 
       {/* Application Questions */}
       <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -464,7 +499,7 @@ export default function ApplicationDetailPage() {
       {/* Job Description */}
       <div className="rounded-lg border bg-card p-4 space-y-2">
         <h2 className="font-semibold text-sm">Job Description</h2>
-        <p className="text-sm whitespace-pre-wrap text-muted-foreground">{app.jobPost.description}</p>
+        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: app.jobPost.description }} />
       </div>
 
       {/* Status History Timeline */}

@@ -135,23 +135,23 @@ export default function EditCvPage() {
       {profileId && (
         <div className="rounded-lg border bg-card p-4 space-y-3">
           <div>
-            <h2 className="font-semibold text-sm">Clone from Profile Draft</h2>
+            <h2 className="font-semibold text-sm">Clone from Resume Template</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Select a resume draft from your <span className="font-medium">{app.jobProfile.name}</span> profile to pre-fill the editor.
+              Select a resume template from your <span className="font-medium">{app.jobProfile.name}</span> profile to pre-fill the editor.
             </p>
           </div>
           {draftsLoading ? (
-            <p className="text-xs text-muted-foreground">Loading drafts...</p>
+            <p className="text-xs text-muted-foreground">Loading templates...</p>
           ) : drafts.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              No resume drafts for this profile yet. Create one on the{' '}
+              No resume templates for this profile yet. Create one on the{' '}
               <Link href="/dashboard/job-profiles" className="underline">Job Profiles</Link> page.
             </p>
           ) : (
             <div className="flex items-center gap-2">
               <Select value={selectedDraftId} onValueChange={setSelectedDraftId}>
                 <SelectTrigger className="h-8 text-xs flex-1">
-                  <SelectValue placeholder="Select a draft..." />
+                  <SelectValue placeholder="Select a template..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none" className="text-xs">Select a draft...</SelectItem>

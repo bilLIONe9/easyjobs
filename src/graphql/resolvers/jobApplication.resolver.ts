@@ -31,6 +31,7 @@ export const jobApplicationResolvers = {
       } else if (filter?.profileId) {
         where.jobProfileId = filter.profileId
       }
+      if (filter?.resumeId) where.resumeId = filter.resumeId
       if (filter?.cvReady === true) where.cvGenerationStatus = 'done'
       if (filter?.startDate) where.createdAt = { gte: new Date(filter.startDate) }
       if (filter?.search || filter?.company) {

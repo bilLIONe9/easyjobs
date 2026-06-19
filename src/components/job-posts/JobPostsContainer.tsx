@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { Plus, Search, CalendarIcon, X, ChevronsUpDown, Check } from 'lucide-react'
+import { Plus, Search, CalendarIcon, X, ChevronsUpDown, Check, Tag } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,8 +14,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { JobPostCard } from './JobPostCard'
-import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY, JOB_PROFILES_QUERY } from '@/lib/graphql/queries'
+import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY, JOB_PROFILES_QUERY, JOB_POST_TAGS_QUERY } from '@/lib/graphql/queries'
 import { getAllJobLocations } from '@/actions/jobLocation.actions'
+import { getTagColor } from './JobPostTagInput'
 
 const DATE_PRESETS = [
   { value: '1d', label: '1 day' },
@@ -63,6 +64,10 @@ export function JobPostsContainer() {
   const [locationOptions, setLocationOptions] = useState<{ id: string; label: string }[]>([])
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
 
+  // Tag filter
+  const [tagFilter, setTagFilter] = useState<string[]>([])
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
+
   useEffect(() => {
     getAllJobLocations().then((res) => {
       if (Array.isArray(res)) setLocationOptions(res)
@@ -77,7 +82,11 @@ export function JobPostsContainer() {
     ...dateFilter,
     ...(excludeProfileIds.length ? { excludeProfileIds } : {}),
     ...(locationFilter ? { location: locationFilter } : {}),
+    ...(tagFilter.length ? { tags: tagFilter } : {}),
   }
+
+  const { data: tagsQueryData } = useQuery(JOB_POST_TAGS_QUERY)
+  const allTags: { id: string; label: string; value: string }[] = (tagsQueryData as any)?.jobPostTags ?? []
 
   const { data, loading, refetch } = useQuery(JOB_POSTS_QUERY, {
     variables: { filter, page, limit: 20 },
@@ -219,6 +228,69 @@ export function JobPostsContainer() {
           </Popover>
         )}
 
+        {/* Tag filter */}
+        {allTags.length > 0 && (
+          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={tagFilter.length ? 'secondary' : 'outline'}
+                size="sm"
+                className="gap-1.5 h-9"
+                role="combobox"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                {tagFilter.length
+                  ? `${tagFilter.length} tag${tagFilter.length > 1 ? 's' : ''}`
+                  : 'Tags'}
+                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search tags..." />
+                <CommandList>
+                  <CommandEmpty>No tags found.</CommandEmpty>
+                  <CommandGroup>
+                    {allTags.map((tag) => (
+                      <CommandItem
+                        key={tag.id}
+                        value={tag.value}
+                        onSelect={() => {
+                          setTagFilter((prev) =>
+                            prev.includes(tag.value)
+                              ? prev.filter((v) => v !== tag.value)
+                              : [...prev, tag.value]
+                          )
+                          setPage(1)
+                        }}
+                      >
+                        <Check
+                          className={cn('mr-2 h-4 w-4', tagFilter.includes(tag.value) ? 'opacity-100' : 'opacity-0')}
+                        />
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${getTagColor(tag.value)}`}>
+                          {tag.label}
+                        </span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+              {tagFilter.length > 0 && (
+                <div className="border-t p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs text-muted-foreground"
+                    onClick={() => { setTagFilter([]); setPage(1) }}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        )}
+
         {/* Exclude by profile */}
         {profiles.length > 0 && (
           <Popover open={profilePopoverOpen} onOpenChange={setProfilePopoverOpen}>
@@ -324,11 +396,11 @@ export function JobPostsContainer() {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* List */}
       {loading && posts.length === 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-44 rounded-lg" />
+        <div className="flex flex-col gap-1.5">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 rounded-lg" />
           ))}
         </div>
       ) : posts.length === 0 ? (
@@ -339,7 +411,7 @@ export function JobPostsContainer() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="flex flex-col gap-1.5">
           {posts.map((post: any) => (
             <JobPostCard key={post.id} post={post} onSaved={() => refetch()} />
           ))}

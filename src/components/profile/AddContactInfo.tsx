@@ -1,13 +1,6 @@
 "use client";
-import { Loader } from "lucide-react";
+import { Loader, X } from "lucide-react";
 import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 import {
   Form,
   FormControl,
@@ -38,17 +31,17 @@ const EMPTY_FORM = {
 };
 
 interface AddContactInfoProps {
-  dialogOpen: boolean;
-  setDialogOpen: (e: boolean) => void;
   contactInfoToEdit?: ContactInfo | null;
   resumeId: string | undefined;
+  onClose: () => void;
+  onLocalSave?: (contactInfo: ContactInfo) => void;
 }
 
 function AddContactInfo({
-  dialogOpen,
-  setDialogOpen,
   contactInfoToEdit,
   resumeId,
+  onClose,
+  onLocalSave,
 }: AddContactInfoProps) {
   const [isPending, startTransition] = useTransition();
 
@@ -78,13 +71,28 @@ function AddContactInfo({
   }, [contactInfoToEdit, reset, resumeId]);
 
   const onSubmit = (data: z.infer<typeof AddContactInfoFormSchema>) => {
+    if (onLocalSave) {
+      onLocalSave({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        headline: data.headline || undefined,
+        phone: data.phone || undefined,
+        address: data.address || undefined,
+        github: data.github || undefined,
+        linkedin: data.linkedin || undefined,
+      });
+      reset(data);
+      onClose();
+      return;
+    }
     startTransition(async () => {
       const res = await saveContactInfo(data);
       if (!res.success) {
         toast({ variant: "destructive", title: "Error!", description: res.message });
       } else {
         reset();
-        setDialogOpen(false);
+        onClose();
         toast({
           variant: "success",
           description: `Contact info ${contactInfoToEdit ? "updated" : "saved"} successfully`,
@@ -94,124 +102,133 @@ function AddContactInfo({
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="lg:max-h-screen overflow-y-scroll">
-        <DialogHeader>
-          <DialogTitle>{contactInfoToEdit ? "Edit Contact Info" : "Add Contact Info"}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4 p-2"
-          >
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">
+          {contactInfoToEdit ? "Edit Contact Info" : "Add Contact Info"}
+        </h3>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+        >
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name *</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name *</FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="md:col-span-2">
             <FormField
               control={form.control}
-              name="firstName"
+              name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First Name *</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormLabel>Email *</FormLabel>
+                  <FormControl><Input {...field} type="email" /></FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+          </div>
+          <div className="md:col-span-2">
             <FormField
               control={form.control}
-              name="lastName"
+              name="headline"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last Name *</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
+                  <FormLabel>Headline</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g. Senior Software Engineer" />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <div className="md:col-span-2">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email *</FormLabel>
-                    <FormControl><Input {...field} type="email" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <div className="md:col-span-2">
-              <FormField
-                control={form.control}
-                name="headline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Headline</FormLabel>
-                    <FormControl><Input {...field} placeholder="e.g. Senior Software Engineer" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Phone</FormLabel>
-                  <FormControl><Input {...field} type="tel" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Location</FormLabel>
-                  <FormControl><Input {...field} placeholder="e.g. Toronto, ON" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="linkedin"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>LinkedIn</FormLabel>
-                  <FormControl><Input {...field} placeholder="linkedin.com/in/username" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="github"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>GitHub</FormLabel>
-                  <FormControl><Input {...field} placeholder="github.com/username" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          </div>
+          <FormField
+            control={form.control}
+            name="phone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone</FormLabel>
+                <FormControl><Input {...field} type="tel" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g. Toronto, ON" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="linkedin"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>LinkedIn</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="linkedin.com/in/username" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="github"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>GitHub</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="github.com/username" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <div className="md:col-span-2 mt-4">
-              <DialogFooter>
-                <Button type="reset" variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={!formState.isDirty}>
-                  Save
-                  {isPending && <Loader className="h-4 w-4 shrink-0 spinner" />}
-                </Button>
-              </DialogFooter>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="md:col-span-2 flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!formState.isDirty || isPending}>
+              Save
+              {isPending && <Loader className="h-4 w-4 shrink-0 animate-spin ml-1" />}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
 

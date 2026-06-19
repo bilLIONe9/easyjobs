@@ -1,12 +1,5 @@
 "use client";
 import { useForm } from "react-hook-form";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 import { AddSkillsFormSchema } from "@/models/addSkillsForm.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../ui/button";
@@ -19,7 +12,7 @@ import {
   FormMessage,
 } from "../ui/form";
 import { Input } from "../ui/input";
-import { Loader } from "lucide-react";
+import { Loader, X } from "lucide-react";
 import { useEffect, useTransition } from "react";
 import { toast } from "../ui/use-toast";
 import { z } from "zod";
@@ -28,30 +21,25 @@ import { SkillCategory } from "@/models/profile.model";
 
 interface AddSkillsProps {
   resumeId: string | undefined;
-  dialogOpen: boolean;
-  setDialogOpen: (e: boolean) => void;
   skillToEdit?: SkillCategory | null;
   skillIndex?: number;
+  onClose: () => void;
+  onLocalSave?: (skill: SkillCategory, index?: number) => void;
 }
 
 function AddSkills({
   resumeId,
-  dialogOpen,
-  setDialogOpen,
   skillToEdit,
   skillIndex,
+  onClose,
+  onLocalSave,
 }: AddSkillsProps) {
   const [isPending, startTransition] = useTransition();
   const isEditing = !!skillToEdit;
 
   const form = useForm<z.infer<typeof AddSkillsFormSchema> & { detailsText: string }>({
     resolver: zodResolver(AddSkillsFormSchema) as any,
-    defaultValues: {
-      resumeId,
-      label: "",
-      details: [],
-      detailsText: "",
-    },
+    defaultValues: { resumeId, label: "", details: [], detailsText: "" },
   });
 
   const { reset, formState, setValue } = form;
@@ -74,19 +62,21 @@ function AddSkills({
   }, [skillToEdit, skillIndex, resumeId, reset]);
 
   const onSubmit = (data: z.infer<typeof AddSkillsFormSchema> & { detailsText: string }) => {
+    if (onLocalSave) {
+      onLocalSave({ label: data.label, details: data.details }, skillIndex);
+      reset(data);
+      onClose();
+      return;
+    }
     startTransition(async () => {
       const res = isEditing
         ? await updateResumeSkills(data)
         : await addResumeSkills(data);
       if (!res.success) {
-        toast({
-          variant: "destructive",
-          title: "Error!",
-          description: res.message,
-        });
+        toast({ variant: "destructive", title: "Error!", description: res.message });
       } else {
         reset();
-        setDialogOpen(false);
+        onClose();
         toast({
           variant: "success",
           description: `Skills ${isEditing ? "updated" : "added"} successfully`,
@@ -102,65 +92,64 @@ function AddSkills({
   };
 
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Edit Skill" : "Add Skill"}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4 p-2"
-          >
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="Ex: Programming Languages" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">
+          {isEditing ? "Edit Skill" : "Add Skill"}
+        </h3>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <Form {...form}>
+        <form
+          onSubmit={form.handleSubmit(onSubmit)}
+          className="flex flex-col gap-3"
+        >
+          <FormField
+            control={form.control}
+            name="label"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Category</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ex: Programming Languages" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="details"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Skills</FormLabel>
-                  <FormControl>
-                    <Input
-                      value={form.watch("detailsText" as any) ?? ""}
-                      onChange={(e) => handleDetailsTextChange(e.target.value)}
-                      placeholder="Ex: JavaScript, TypeScript, Python"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="details"
+            render={() => (
+              <FormItem>
+                <FormLabel>Skills</FormLabel>
+                <FormControl>
+                  <Input
+                    value={form.watch("detailsText" as any) ?? ""}
+                    onChange={(e) => handleDetailsTextChange(e.target.value)}
+                    placeholder="Ex: JavaScript, TypeScript, Python"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <DialogFooter className="mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!formState.isDirty}>
-                Save
-                {isPending && <Loader className="h-4 w-4 shrink-0 spinner" />}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!formState.isDirty || isPending}>
+              Save
+              {isPending && <Loader className="h-4 w-4 shrink-0 animate-spin ml-1" />}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
 

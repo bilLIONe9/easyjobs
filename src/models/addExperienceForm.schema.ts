@@ -27,7 +27,7 @@ export const AddExperienceFormSchema = z.object({
   jobDescription: z.string().min(10, {
     message: "Job description must be at least 10 characters.",
   }),
-  startDate: z.date(),
-  endDate: z.date().nullable().optional(),
+  startDate: z.string().min(1, { message: "Start date is required." }),
+  endDate: z.string().nullable().optional(),
   currentJob: z.boolean().default(false).optional(),
 });

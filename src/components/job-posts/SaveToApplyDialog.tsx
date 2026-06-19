@@ -14,6 +14,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { JOB_PROFILES_QUERY, SAVE_JOB_POST_TO_APPLY } from '@/lib/graphql/queries'
+import Link from 'next/link'
 
 interface SaveToApplyDialogProps {
   jobPostId: string
@@ -96,7 +97,7 @@ export function SaveToApplyDialog({
             {allProfiles.length === 0 && !profilesLoading && (
               <p className="text-xs text-muted-foreground">
                 No profiles yet.{' '}
-                <a href="/dashboard/job-profiles" className="underline">Create one</a> to enable CV generation.
+                <Link href="/dashboard/job-profiles" className="underline">Create one</Link> to enable CV generation.
               </p>
             )}
             {allProfiles.length > 0 && profiles.length === 0 && !profilesLoading && (

@@ -242,10 +242,19 @@ model JobPost {
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   applications JobApplication[]
+  tags         JobPostTag[]
 
   @@index([userId])
   @@index([userId, status])
   @@index([postedAt])
+}
+
+model JobPostTag {
+  id        String    @id @default(uuid())
+  label     String
+  value     String    @unique
+  jobPosts  JobPost[]
+  createdAt DateTime  @default(now())
 }
 
 model JobProfile {

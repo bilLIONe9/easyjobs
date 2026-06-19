@@ -1,0 +1,57 @@
+"use client";
+import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import { Loader } from "lucide-react";
+import { Resume } from "@/models/profile.model";
+import type { ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
+
+const PdfViewerPanel = dynamic(
+  () => import("./resume-pdf/PdfViewerPanel").then((m) => ({ default: m.PdfViewerPanel })),
+  { ssr: false },
+);
+
+interface ResumePdfPanelProps {
+  resume: Resume;
+}
+
+export function ResumePdfPanel({ resume }: ResumePdfPanelProps) {
+  const [htmlNodes, setHtmlNodes] = useState<ResumeHtmlNodes | null>(null);
+
+  // Rebuild PDF nodes only when rich-text content actually changes
+  const contentKey = [
+    resume.summary ?? "",
+    ...(resume.experiences?.map((e) => e.description ?? "") ?? []),
+    ...(resume.educations?.map((e) => e.description ?? "") ?? []),
+  ].join("\0");
+
+  useEffect(() => {
+    import("./resume-pdf/html-to-pdf").then(({ htmlToPdfNodes }) => {
+      setHtmlNodes({
+        summary: resume.summary ? htmlToPdfNodes(resume.summary) : [],
+        experiences:
+          resume.experiences?.map((e) =>
+            e.description ? htmlToPdfNodes(e.description) : [],
+          ) ?? [],
+        educations:
+          resume.educations?.map((e) =>
+            e.description ? htmlToPdfNodes(e.description) : [],
+          ) ?? [],
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume.id, contentKey]);
+
+  if (!htmlNodes) {
+    return (
+      <div className="h-full rounded-lg border bg-muted flex items-center justify-center">
+        <Loader className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full rounded-lg border overflow-hidden shadow-sm">
+      <PdfViewerPanel resume={resume} htmlNodes={htmlNodes} />
+    </div>
+  );
+}

@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/utils/user.utils";
 import { APP_CONSTANTS } from "@/lib/constants";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { Resume } from "@/models/profile.model";
 
 // ─── Resume CRUD ──────────────────────────────────────────────────────────────
 
@@ -548,5 +549,32 @@ export const deleteCertification = async (
     return { success: true };
   } catch (error) {
     return handleError(error, "Failed to delete certification.");
+  }
+};
+
+// ─── Save full resume (local-first draft) ─────────────────────────────────────
+
+export const saveFullResume = async (resume: Resume): Promise<any | undefined> => {
+  try {
+    if (!resume.id) throw new Error("Resume id is required");
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Not authenticated");
+
+    await prisma.resume.update({
+      where: { id: resume.id, userId: user.id },
+      data: {
+        contactInfo: (resume.contactInfo as any) ?? undefined,
+        summary: resume.summary ?? null,
+        skills: (resume.skills as any) ?? [],
+        experiences: (resume.experiences as any) ?? [],
+        educations: (resume.educations as any) ?? [],
+        certifications: (resume.certifications as any) ?? [],
+      },
+    });
+    revalidatePath(`/dashboard/profile/resume/${resume.id}`);
+    revalidatePath(`/dashboard/job-profiles`);
+    return { success: true };
+  } catch (error) {
+    return handleError(error, "Failed to save resume.");
   }
 };

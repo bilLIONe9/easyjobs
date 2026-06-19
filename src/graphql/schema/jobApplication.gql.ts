@@ -96,6 +96,7 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     status: String
     profileId: ID
     profileIds: [ID]
+    resumeId: ID
     cvReady: Boolean
     startDate: String
     search: String

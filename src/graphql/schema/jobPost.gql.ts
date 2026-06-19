@@ -1,4 +1,10 @@
 export const jobPostTypeDefs = /* GraphQL */ `
+  type JobPostTag {
+    id: ID!
+    label: String!
+    value: String!
+  }
+
   type JobPost {
     id: ID!
     title: String!
@@ -16,6 +22,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     applications: [JobApplication!]!
     applicationCount: Int!
     savedProfileIds: [ID!]!
+    tags: [JobPostTag!]!
   }
 
   type JobPostPage {
@@ -43,6 +50,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     sourceUrl: String
     jobType: String
     jobSource: String
+    tagIds: [ID!]
   }
 
   input UpdateJobPostInput {
@@ -56,6 +64,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     jobType: String
     jobSource: String
     status: String
+    tagIds: [ID!]
   }
 
   input JobPostFilter {
@@ -64,6 +73,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     startDate: String
     excludeProfileIds: [ID]
     location: String
+    tags: [String!]
   }
 
   extend type Query {
@@ -71,6 +81,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     jobPost(id: ID!): JobPost
     jobPostInsights: JobPostInsights!
     checkDuplicateJobPosts(title: String!, postedBy: String!, excludeId: ID): [JobPost!]!
+    jobPostTags: [JobPostTag!]!
   }
 
   extend type Mutation {
@@ -78,5 +89,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     updateJobPost(id: ID!, input: UpdateJobPostInput!): JobPost!
     setJobPostStatus(id: ID!, status: String!): JobPost!
     deleteJobPost(id: ID!): Boolean!
+    createJobPostTag(label: String!): JobPostTag!
+    setJobPostTags(jobPostId: ID!, tagIds: [ID!]!): JobPost!
   }
 `

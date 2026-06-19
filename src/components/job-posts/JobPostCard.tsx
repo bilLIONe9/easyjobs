@@ -1,11 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { useMutation, useLazyQuery } from '@apollo/client/react'
-import { MapPin, DollarSign, User, Calendar, ExternalLink, MoreHorizontal, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import Link from 'next/link'
+import { useMutation, useQuery } from '@apollo/client/react'
+import { MapPin, DollarSign, Calendar, ExternalLink, MoreHorizontal, Tag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,10 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { SET_JOB_POST_STATUS, DELETE_JOB_POST, JOB_POSTS_QUERY, JOB_POST_QUERY } from '@/lib/graphql/queries'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { SET_JOB_POST_STATUS, DELETE_JOB_POST, JOB_POSTS_QUERY, SET_JOB_POST_TAGS, JOB_POST_TAGS_QUERY, CREATE_JOB_POST_TAG } from '@/lib/graphql/queries'
 import { SaveToApplyDialog } from './SaveToApplyDialog'
-import { JobPostForm } from './JobPostForm'
 import { format } from 'date-fns'
+import { JobPostTagInput, JobPostTagOption, getTagColor } from './JobPostTagInput'
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -36,82 +36,61 @@ interface JobPostCardProps {
     status: string
     applicationCount: number
     savedProfileIds: string[]
+    tags?: { id: string; label: string; value: string }[]
   }
   onSaved?: () => void
 }
 
 export function JobPostCard({ post, onSaved }: JobPostCardProps) {
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [editOpen, setEditOpen] = useState(false)
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
+  const [localTagIds, setLocalTagIds] = useState<string[]>((post.tags ?? []).map((t) => t.id))
 
   const [setStatus] = useMutation(SET_JOB_POST_STATUS, { refetchQueries: [JOB_POSTS_QUERY] })
   const [deletePost] = useMutation(DELETE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
-  const [fetchPost, { data: fullPostData, loading: fetchingPost }] = useLazyQuery(JOB_POST_QUERY)
+  const [setTags] = useMutation(SET_JOB_POST_TAGS, { refetchQueries: [JOB_POSTS_QUERY] })
+  const [createTag] = useMutation(CREATE_JOB_POST_TAG, { refetchQueries: [JOB_POST_TAGS_QUERY] })
 
-  function handleEditClick() {
-    setEditOpen(true)
-    fetchPost({ variables: { id: post.id } })
+  const { data: tagsData, refetch: refetchTags } = useQuery(JOB_POST_TAGS_QUERY)
+  const allTags: JobPostTagOption[] = (tagsData as any)?.jobPostTags ?? []
+
+  const locations = post.locations ?? []
+  const currentTags = localTagIds.map((id) => allTags.find((t) => t.id === id) ?? (post.tags ?? []).find((t) => t.id === id)).filter(Boolean) as { id: string; label: string; value: string }[]
+
+  async function handleTagChange(ids: string[]) {
+    setLocalTagIds(ids)
+    await setTags({ variables: { jobPostId: post.id, tagIds: ids } })
   }
 
-  const fullPost = (fullPostData as any)?.jobPost
-  const locations = post.locations ?? []
+  async function handleCreateTag(label: string): Promise<JobPostTagOption | null> {
+    try {
+      const res = await createTag({ variables: { label } })
+      const tag = (res.data as any)?.createJobPostTag
+      if (tag) {
+        await refetchTags()
+        return tag
+      }
+    } catch {}
+    return null
+  }
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm leading-tight truncate">{post.title}</h3>
-              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
-                <User className="h-3 w-3" />
-                {post.postedBy}
-              </p>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <Badge className={`text-xs ${STATUS_COLORS[post.status] ?? ''}`} variant="outline">
-                {post.status}
-              </Badge>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreHorizontal className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleEditClick}>
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {post.status !== 'closed' && (
-                    <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'closed' } })}>
-                      Mark as Closed
-                    </DropdownMenuItem>
-                  )}
-                  {post.status !== 'inappropriate' && (
-                    <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'inappropriate' } })}>
-                      Mark as Inappropriate
-                    </DropdownMenuItem>
-                  )}
-                  {post.status !== 'active' && (
-                    <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'active' } })}>
-                      Mark as Active
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => deletePost({ variables: { id: post.id } })}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+      <div className="flex items-start gap-3 px-4 py-3 border rounded-lg hover:bg-muted/40 transition-colors">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              href={`/dashboard/job-posts/${post.id}`}
+              className="font-medium text-sm hover:underline underline-offset-2 truncate"
+            >
+              {post.title}
+            </Link>
+            <Badge className={`text-xs shrink-0 ${STATUS_COLORS[post.status] ?? ''}`} variant="outline">
+              {post.status}
+            </Badge>
           </div>
-        </CardHeader>
-        <CardContent className="pt-0 space-y-2">
-          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
+            <span>{post.postedBy}</span>
             {locations.length > 0 && (
               <span className="flex items-center gap-1">
                 <MapPin className="h-3 w-3 shrink-0" />
@@ -128,33 +107,99 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
               <Calendar className="h-3 w-3" />
               {format(new Date(post.postedAt), 'MMM d, yyyy')}
             </span>
-          </div>
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-muted-foreground">
+            <span>
               {post.applicationCount > 0
                 ? `${post.applicationCount} application${post.applicationCount !== 1 ? 's' : ''}`
-                : 'Not applied yet'}
+                : 'No applications'}
             </span>
-            <div className="flex items-center gap-1">
-              {post.sourceUrl && (
-                <Button variant="ghost" size="icon" className="h-6 w-6" asChild>
-                  <a href={post.sourceUrl} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+          </div>
+
+          {/* Tags row */}
+          <div className="flex items-center gap-1 flex-wrap mt-1">
+            {currentTags.map((tag) => (
+              <Badge
+                key={tag.id}
+                variant="outline"
+                className={`text-xs border-0 px-1.5 py-0 h-5 ${getTagColor(tag.value)}`}
+              >
+                {tag.label}
+              </Badge>
+            ))}
+            <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 rounded-full text-muted-foreground hover:text-foreground"
+                  type="button"
+                >
+                  <Tag className="h-3 w-3" />
                 </Button>
-              )}
-              <Button
-                size="sm"
-                className="h-7 text-xs"
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="start">
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Manage tags</p>
+                <JobPostTagInput
+                  value={localTagIds}
+                  onChange={handleTagChange}
+                  tags={allTags}
+                  onCreateTag={handleCreateTag}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0">
+          {post.sourceUrl && (
+            <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+              <a href={post.sourceUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+            <Link href={`/dashboard/job-posts/${post.id}`}>View</Link>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
                 disabled={post.status !== 'active'}
                 onClick={() => setDialogOpen(true)}
               >
                 Save to Apply
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {post.status !== 'closed' && (
+                <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'closed' } })}>
+                  Mark as Closed
+                </DropdownMenuItem>
+              )}
+              {post.status !== 'inappropriate' && (
+                <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'inappropriate' } })}>
+                  Mark as Inappropriate
+                </DropdownMenuItem>
+              )}
+              {post.status !== 'active' && (
+                <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'active' } })}>
+                  Mark as Active
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive"
+                onClick={() => deletePost({ variables: { id: post.id } })}
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
 
       <SaveToApplyDialog
         jobPostId={post.id}
@@ -164,25 +209,6 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
         onOpenChange={setDialogOpen}
         onSaved={onSaved}
       />
-
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Job Post</DialogTitle>
-          </DialogHeader>
-          {fetchingPost || !fullPost ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <JobPostForm
-              editPost={fullPost}
-              onSuccess={() => setEditOpen(false)}
-              onCancel={() => setEditOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 import { useForm } from 'react-hook-form'
-import { useMutation, useLazyQuery } from '@apollo/client/react'
+import { useMutation, useLazyQuery, useQuery } from '@apollo/client/react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useState, useEffect } from 'react'
@@ -26,7 +26,8 @@ import { getAllJobLocations } from '@/actions/jobLocation.actions'
 import { createLocation } from '@/actions/job.actions'
 import { getJobSourceList } from '@/actions/jobSource.actions'
 import { JOB_TYPES } from '@/models/job.model'
-import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, CHECK_DUPLICATE_JOB_POSTS } from '@/lib/graphql/queries'
+import { CREATE_JOB_POST, UPDATE_JOB_POST, JOB_POSTS_QUERY, JOB_POST_QUERY, CHECK_DUPLICATE_JOB_POSTS, JOB_POST_TAGS_QUERY, CREATE_JOB_POST_TAG } from '@/lib/graphql/queries'
+import { JobPostTagInput, JobPostTagOption } from './JobPostTagInput'
 import TiptapEditor from '@/components/TiptapEditor'
 import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -41,6 +42,7 @@ const schema = z.object({
   sourceUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   jobType: z.string().optional(),
   jobSource: z.string().optional(),
+  tagIds: z.array(z.string()),
 })
 
 type FormData = z.infer<typeof schema>
@@ -57,6 +59,7 @@ interface JobPostFormProps {
     sourceUrl?: string | null
     jobType?: string | null
     jobSource?: string | null
+    tags?: { id: string; label: string; value: string }[]
   }
   onSuccess?: () => void
   onCancel?: () => void
@@ -71,6 +74,10 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
   const [locationSearch, setLocationSearch] = useState('')
   const [isCreatingLocation, setIsCreatingLocation] = useState(false)
 
+  const { data: tagsData, refetch: refetchTags } = useQuery(JOB_POST_TAGS_QUERY)
+  const allTags: JobPostTagOption[] = (tagsData as any)?.jobPostTags ?? []
+  const [createTag] = useMutation(CREATE_JOB_POST_TAG)
+
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: editPost
@@ -84,6 +91,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
           company: '',
           locations: [],
           jobSource: '',
+          tagIds: editPost.tags?.map((t) => t.id) ?? [],
         }
       : {
           title: '',
@@ -95,6 +103,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
           jobType: '',
           jobSource: '',
           postedAt: format(new Date(), 'yyyy-MM-dd'),
+          tagIds: [],
         },
   })
 
@@ -174,7 +183,19 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
   }, [titleValue, companyValue, companies]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [createPost] = useMutation(CREATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
-  const [updatePost] = useMutation(UPDATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY] })
+  const [updatePost] = useMutation(UPDATE_JOB_POST, { refetchQueries: [JOB_POSTS_QUERY, JOB_POST_QUERY] })
+
+  async function handleCreateTag(label: string): Promise<JobPostTagOption | null> {
+    try {
+      const res = await createTag({ variables: { label } })
+      const tag = (res.data as any)?.createJobPostTag
+      if (tag) {
+        await refetchTags()
+        return tag
+      }
+    } catch {}
+    return null
+  }
 
   const onSubmit = async (data: FormData) => {
     const selectedCompany = companies.find((c) => c.id === data.company)
@@ -193,6 +214,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
       sourceUrl: data.sourceUrl || null,
       jobType: data.jobType || null,
       jobSource: (selectedJobSource?.label ?? data.jobSource) || null,
+      tagIds: data.tagIds ?? [],
     }
 
     if (editPost) {
@@ -450,6 +472,25 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
                   </FormItem>
                 ))}
               </RadioGroup>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="tagIds"
+          render={({ field }) => (
+            <FormItem className="flex flex-col">
+              <FormLabel>Tags</FormLabel>
+              <FormControl>
+                <JobPostTagInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  tags={allTags}
+                  onCreateTag={handleCreateTag}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

@@ -1,25 +1,26 @@
 "use client";
 import { LicenseOrCertification } from "@/models/profile.model";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Edit, ExternalLink } from "lucide-react";
+import { Edit, ExternalLink, Plus } from "lucide-react";
 import { format } from "date-fns";
 
 interface CertificationCardProps {
   certifications: LicenseOrCertification[];
-  openDialogForEdit: (index: number) => void;
+  onEdit: (index: number) => void;
+  onAdd: () => void;
 }
 
-function CertificationCard({ certifications, openDialogForEdit }: CertificationCardProps) {
+function CertificationCard({ certifications, onEdit, onAdd }: CertificationCardProps) {
   return (
     <>
-      <CardTitle className="pl-6 py-3">Certifications</CardTitle>
+      <div className="flex items-center justify-between pl-4 pr-1 py-1">
+        <span className="text-sm font-semibold">Certifications</span>
+        <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={onAdd}>
+          <Plus className="h-3.5 w-3.5" />
+          <span className="sr-only sm:not-sr-only sm:whitespace-nowrap text-xs">Add</span>
+        </Button>
+      </div>
       {certifications.map((cert, index) => (
         <Card key={`${cert.title}_${cert.organization}`}>
           <CardHeader className="p-2 pb-0 flex-row justify-between relative">
@@ -28,12 +29,10 @@ function CertificationCard({ certifications, openDialogForEdit }: CertificationC
               variant="ghost"
               size="sm"
               className="h-8 gap-1 absolute top-0 right-1"
-              onClick={() => openDialogForEdit(index)}
+              onClick={() => onEdit(index)}
             >
               <Edit className="h-3.5 w-3.5" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Edit
-              </span>
+              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">Edit</span>
             </Button>
           </CardHeader>
           <CardContent>

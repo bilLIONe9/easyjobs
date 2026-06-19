@@ -14,6 +14,7 @@ export const resolvers = {
     ...jobProfileResolvers.Mutation,
   },
   JobPost: jobPostResolvers.JobPost,
+  JobPostTag: jobPostResolvers.JobPostTag,
   JobApplication: jobApplicationResolvers.JobApplication,
   JobProfile: jobProfileResolvers.JobProfile,
 }

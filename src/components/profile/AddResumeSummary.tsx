@@ -1,11 +1,4 @@
 import { useForm } from "react-hook-form";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 import { AddSummarySectionFormSchema } from "@/models/addSummaryForm.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "../ui/button";
@@ -17,66 +10,52 @@ import {
   FormLabel,
   FormMessage,
 } from "../ui/form";
-import { Loader } from "lucide-react";
-import { useEffect, useTransition } from "react";
+import { Loader, X } from "lucide-react";
+import { useTransition } from "react";
 import { toast } from "../ui/use-toast";
 import { z } from "zod";
 import TiptapEditor from "../TiptapEditor";
-import {
-  addResumeSummary,
-  updateResumeSummary,
-} from "@/actions/profile.actions";
+import { addResumeSummary, updateResumeSummary } from "@/actions/profile.actions";
 
 interface AddResumeSummaryProps {
   resumeId: string | undefined;
-  dialogOpen: boolean;
-  setDialogOpen: (e: boolean) => void;
   summaryContent?: string | null;
+  onClose: () => void;
+  onLocalSave?: (summary: string) => void;
 }
 
 function AddResumeSummary({
   resumeId,
-  dialogOpen,
-  setDialogOpen,
   summaryContent,
+  onClose,
+  onLocalSave,
 }: AddResumeSummaryProps) {
   const [isPending, startTransition] = useTransition();
-
   const isEditing = !!summaryContent;
-  const pageTitle = isEditing ? "Edit Summary" : "Add Summary";
 
   const form = useForm<z.infer<typeof AddSummarySectionFormSchema>>({
     resolver: zodResolver(AddSummarySectionFormSchema),
-    defaultValues: {
-      resumeId,
-      content: "",
-    },
+    defaultValues: { resumeId, content: summaryContent ?? "" },
   });
 
-  const { reset, formState } = form;
-
-  useEffect(() => {
-    if (summaryContent) {
-      reset({ resumeId, content: summaryContent }, { keepDefaultValues: true });
-    } else {
-      reset({ resumeId, content: "" });
-    }
-  }, [summaryContent, resumeId, reset]);
+  const { formState } = form;
 
   const onSubmit = (data: z.infer<typeof AddSummarySectionFormSchema>) => {
+    if (onLocalSave) {
+      onLocalSave(data.content);
+      form.reset({ resumeId, content: data.content });
+      onClose();
+      return;
+    }
     startTransition(async () => {
       const res = isEditing
         ? await updateResumeSummary(data)
         : await addResumeSummary(data);
       if (!res.success) {
-        toast({
-          variant: "destructive",
-          title: "Error!",
-          description: res.message,
-        });
+        toast({ variant: "destructive", title: "Error!", description: res.message });
       } else {
-        reset();
-        setDialogOpen(false);
+        form.reset();
+        onClose();
         toast({
           variant: "success",
           description: `Summary has been ${isEditing ? "updated" : "created"} successfully`,
@@ -85,49 +64,43 @@ function AddResumeSummary({
     });
   };
 
-  const closeDialog = () => setDialogOpen(false);
-
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="lg:max-h-screen overflow-y-scroll">
-        <DialogHeader>
-          <DialogTitle>{pageTitle}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="flex flex-col gap-4 p-2"
-          >
-            <FormField
-              control={form.control}
-              name="content"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Resume Summary</FormLabel>
-                  <FormControl>
-                    <TiptapEditor field={field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter className="mt-4">
-              <Button
-                type="reset"
-                variant="outline"
-                onClick={closeDialog}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={!formState.isDirty}>
-                Save
-                {isPending && <Loader className="h-4 w-4 shrink-0 spinner" />}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">
+          {isEditing ? "Edit Summary" : "Add Summary"}
+        </h3>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-3">
+          <FormField
+            control={form.control}
+            name="content"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Resume Summary</FormLabel>
+                <FormControl>
+                  <TiptapEditor field={field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!formState.isDirty || isPending}>
+              Save
+              {isPending && <Loader className="h-4 w-4 shrink-0 animate-spin ml-1" />}
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
 
