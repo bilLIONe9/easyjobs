@@ -499,7 +499,7 @@ export default function ApplicationDetailPage() {
       {/* Job Description */}
       <div className="rounded-lg border bg-card p-4 space-y-2">
         <h2 className="font-semibold text-sm">Job Description</h2>
-        <p className="text-sm whitespace-pre-wrap text-muted-foreground">{app.jobPost.description}</p>
+        <div className="prose prose-sm dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: app.jobPost.description }} />
       </div>
 
       {/* Status History Timeline */}
