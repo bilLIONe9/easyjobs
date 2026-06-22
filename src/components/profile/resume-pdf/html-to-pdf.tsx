@@ -97,7 +97,7 @@ function walkNode(
             )
             .filter(Boolean);
           return (
-            <View key={`${key}-li${i}`} style={styles.listRow}>
+            <View key={`${key}-li${i}`} style={styles.listRow} wrap={false}>
               <Text style={styles.bullet}>{marker}</Text>
               <Text style={styles.listText}>{liChildren}</Text>
             </View>
