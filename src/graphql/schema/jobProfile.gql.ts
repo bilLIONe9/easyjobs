@@ -6,7 +6,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
     linkedin: String
     phone: String
     github: String
-    location: String
+    address: String
     description: String
     details: String
     isDefault: Boolean!
@@ -46,7 +46,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
     linkedin: String
     phone: String
     github: String
-    location: String
+    address: String
     description: String
     details: String
     isDefault: Boolean
@@ -58,7 +58,7 @@ export const jobProfileTypeDefs = /* GraphQL */ `
     linkedin: String
     phone: String
     github: String
-    location: String
+    address: String
     description: String
     details: String
     isDefault: Boolean

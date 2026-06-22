@@ -1,5 +1,5 @@
 import { GraphQLContext, requireAuth } from '../context'
-import { cvGenerationQueue } from '@/lib/queue'
+import { enqueueGenerateCV } from '@/lib/lavinmq'
 
 const PAGE_SIZE = 20
 
@@ -259,13 +259,26 @@ export const jobApplicationResolvers = {
         include: { jobPost: true, jobProfile: true },
       })
       if (!application) throw new Error('Application not found')
+      if (!application.jobProfile) throw new Error('No job profile linked to this application')
+      if (!application.jobProfile.details) throw new Error('Job profile must have details filled in to generate a CV')
 
-      await cvGenerationQueue.add('generate-cv', {
+      const nameParts = application.jobProfile.name.trim().split(/\s+/)
+      const firstName = nameParts[0]
+      const lastName = nameParts.slice(1).join(' ') || ''
+
+      await enqueueGenerateCV({
+        profile: {
+          firstName,
+          lastName,
+          email: application.jobProfile.email,
+          phone: application.jobProfile.phone ?? undefined,
+          address: application.jobProfile.address ?? undefined,
+          linkedin: application.jobProfile.linkedin ?? undefined,
+          github: application.jobProfile.github ?? undefined,
+          details: application.jobProfile.details,
+        },
         applicationId: application.id,
-        userId,
-        jobTitle: application.jobPost.title,
         jobDescription: application.jobPost.description,
-        profileDetails: application.jobProfile?.details ?? null,
       })
 
       return ctx.prisma.jobApplication.update({
@@ -304,7 +317,7 @@ export const jobApplicationResolvers = {
           endDate: endDate || null,
           currentJob: !endDate,
           description: Array.isArray(e.highlights)
-            ? e.highlights.join('\n')
+            ? `<ul class="list-disc pl-4">${e.highlights.map((h: string) => `<li><p>${h}</p></li>`).join('')}</ul>`
             : (e.description ?? ''),
         }
       })
@@ -328,11 +341,24 @@ export const jobApplicationResolvers = {
         credentialUrl: c.credentialUrl ?? c.url ?? null,
       }))
 
+      const raw = cv.contactInfo ?? cv.ContactInfo ?? {}
+      const contactInfo = {
+        firstName: raw.firstName ?? raw.first_name ?? '',
+        lastName: raw.lastName ?? raw.last_name ?? '',
+        email: raw.email ?? '',
+        phone: raw.phone ?? null,
+        address: raw.address ?? null,
+        headline: raw.headline ?? null,
+        linkedin: raw.linkedin ?? null,
+        github: raw.github ?? null,
+      }
+
       const resume = await ctx.prisma.resume.create({
         data: {
           userId: application.userId,
           title: cv.title ?? 'Generated Resume',
           summary: cv.Summary ?? cv.summary ?? null,
+          contactInfo,
           skills,
           experiences,
           educations,
@@ -343,6 +369,25 @@ export const jobApplicationResolvers = {
       return ctx.prisma.jobApplication.update({
         where: { id: args.applicationId },
         data: { cvGenerationStatus: 'done', resumeId: resume.id },
+        include: APPLICATION_INCLUDE,
+      })
+    },
+
+    reportCVGenerationFailed: async (
+      _: unknown,
+      args: { applicationId: string; reason?: string },
+      ctx: GraphQLContext,
+    ) => {
+      if (!ctx.isWebhook && !ctx.userId) throw new Error('Not authenticated')
+
+      const application = await ctx.prisma.jobApplication.findUnique({
+        where: { id: args.applicationId },
+      })
+      if (!application) throw new Error('Application not found')
+
+      return ctx.prisma.jobApplication.update({
+        where: { id: args.applicationId },
+        data: { cvGenerationStatus: 'failed' },
         include: APPLICATION_INCLUDE,
       })
     },

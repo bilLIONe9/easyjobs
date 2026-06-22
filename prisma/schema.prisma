@@ -266,9 +266,9 @@ model JobProfile {
   linkedin      String?
   phone         String?
   github        String?
-  location      String?
+  address       String?
   description   String?
-  details       String?
+  details       String
   isDefault     Boolean          @default(false)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt

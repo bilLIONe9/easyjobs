@@ -55,7 +55,7 @@ export function JobProfilesContainer() {
                     <h3 className="font-semibold text-sm group-hover:underline">{p.name}</h3>
                     {p.isDefault && <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />}
                   </div>
-                  {p.location && <p className="text-xs text-muted-foreground mt-0.5">{p.location}</p>}
+                  {p.address && <p className="text-xs text-muted-foreground mt-0.5">{p.address}</p>}
                 </Link>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <Badge variant="outline" className="text-xs">

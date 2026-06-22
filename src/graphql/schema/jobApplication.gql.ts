@@ -119,5 +119,7 @@ export const jobApplicationTypeDefs = /* GraphQL */ `
     generateCV(applicationId: ID!): JobApplication!
     # Called by the external generator service when CV generation is complete
     createResumeFromCV(applicationId: ID!, cvData: JSON!): JobApplication!
+    # Called by the external generator service when CV generation fails
+    reportCVGenerationFailed(applicationId: ID!, reason: String): JobApplication!
   }
 `

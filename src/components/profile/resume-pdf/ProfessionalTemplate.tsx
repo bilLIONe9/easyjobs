@@ -79,11 +79,11 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
         )}
 
         {/* Experience */}
-        {experiences && experiences.length > 0 && (
-          <View>
-            <SectionHeading title="Experience" />
-            {experiences.map((exp, i) => (
-              <View key={i} style={{ marginBottom: 8 }} wrap={false}>
+        {experiences && experiences.length > 0 &&
+          experiences.map((exp, i) => (
+            <View key={i} style={{ marginBottom: 8 }}>
+              <View wrap={false}>
+                {i === 0 && <SectionHeading title="Experience" />}
                 <Text style={styles.entryTitle}>
                   {exp.jobTitle} — {exp.company}
                 </Text>
@@ -91,18 +91,18 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                   {exp.startDate} – {exp.endDate} ·{" "}
                   {exp.location}
                 </Text>
-                {htmlNodes.experiences[i]}
               </View>
-            ))}
-          </View>
-        )}
+              {htmlNodes.experiences[i]}
+            </View>
+          ))
+        }
 
         {/* Education */}
-        {educations && educations.length > 0 && (
-          <View>
-            <SectionHeading title="Education" />
-            {educations.map((edu, i) => (
-              <View key={i} style={{ marginBottom: 8 }} wrap={false}>
+        {educations && educations.length > 0 &&
+          educations.map((edu, i) => (
+            <View key={i} style={{ marginBottom: 8 }}>
+              <View wrap={false}>
+                {i === 0 && <SectionHeading title="Education" />}
                 <Text style={styles.entryTitle}>{edu.institution}</Text>
                 <Text style={styles.entryMeta}>
                   {[edu.degree, edu.fieldOfStudy].filter(Boolean).join(", ")}
@@ -113,38 +113,36 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
                   {edu.cgpa ? ` · GPA: ${edu.cgpa}` : ""} ·{" "}
                   {edu.location}
                 </Text>
-                {htmlNodes.educations[i]}
               </View>
-            ))}
-          </View>
-        )}
+              {htmlNodes.educations[i]}
+            </View>
+          ))
+        }
 
         {/* Certifications */}
-        {certifications && certifications.length > 0 && (
-          <View>
-            <SectionHeading title="Certifications" />
-            {certifications.map((cert, i) => (
-              <View key={i} style={{ marginBottom: 6 }} wrap={false}>
-                <Text style={styles.entryTitle}>{cert.title}</Text>
-                <Text style={styles.entryMeta}>{cert.organization}</Text>
-                {(cert.issueDate || cert.expirationDate) && (
-                  <Text style={styles.entryMeta}>
-                    {cert.issueDate
-                      ? `Issued: ${formatDate(cert.issueDate)}`
-                      : ""}
-                    {cert.issueDate && cert.expirationDate ? " · " : ""}
-                    {cert.expirationDate
-                      ? `Expires: ${formatDate(cert.expirationDate)}`
-                      : ""}
-                  </Text>
-                )}
-                {cert.credentialUrl && (
-                  <Text style={styles.entryMeta}>{cert.credentialUrl}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
+        {certifications && certifications.length > 0 &&
+          certifications.map((cert, i) => (
+            <View key={i} style={{ marginBottom: 6 }} wrap={false}>
+              {i === 0 && <SectionHeading title="Certifications" />}
+              <Text style={styles.entryTitle}>{cert.title}</Text>
+              <Text style={styles.entryMeta}>{cert.organization}</Text>
+              {(cert.issueDate || cert.expirationDate) && (
+                <Text style={styles.entryMeta}>
+                  {cert.issueDate
+                    ? `Issued: ${formatDate(cert.issueDate)}`
+                    : ""}
+                  {cert.issueDate && cert.expirationDate ? " · " : ""}
+                  {cert.expirationDate
+                    ? `Expires: ${formatDate(cert.expirationDate)}`
+                    : ""}
+                </Text>
+              )}
+              {cert.credentialUrl && (
+                <Text style={styles.entryMeta}>{cert.credentialUrl}</Text>
+              )}
+            </View>
+          ))
+        }
       </Page>
     </Document>
   );

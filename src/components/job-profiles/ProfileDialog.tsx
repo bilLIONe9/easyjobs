@@ -14,7 +14,7 @@ interface ProfileForm {
   linkedin: string
   phone: string
   github: string
-  location: string
+  address: string
   description: string
   details: string
   isDefault: boolean
@@ -34,12 +34,12 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
           linkedin: editProfile.linkedin ?? '',
           phone: editProfile.phone ?? '',
           github: editProfile.github ?? '',
-          location: editProfile.location ?? '',
+          address: editProfile.address ?? '',
           description: editProfile.description ?? '',
           details: editProfile.details ?? '',
           isDefault: editProfile.isDefault ?? false,
         }
-      : { name: '', email: '', linkedin: '', phone: '', github: '', location: '', description: '', details: '', isDefault: false },
+      : { name: '', email: '', linkedin: '', phone: '', github: '', address: '', description: '', details: '', isDefault: false },
   })
 
   const [create] = useMutation(CREATE_JOB_PROFILE, { refetchQueries: [JOB_PROFILES_QUERY] })
@@ -51,7 +51,7 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
       linkedin: data.linkedin || null,
       phone: data.phone || null,
       github: data.github || null,
-      location: data.location || null,
+      address: data.address || null,
       description: data.description || null,
       details: data.details || null,
       email: data.email,
@@ -90,8 +90,8 @@ export function ProfileDialog({ editProfile, onClose }: Props) {
           <Input {...register('phone')} placeholder="+1 (555) 000-0000" />
         </div>
         <div className="grid gap-1.5">
-          <Label>Location</Label>
-          <Input {...register('location')} placeholder="City, Country" />
+          <Label>Address</Label>
+          <Input {...register('address')} placeholder="City, Country" />
         </div>
       </div>
       <div className="grid gap-1.5">
