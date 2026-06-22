@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { useMutation, useLazyQuery } from '@apollo/client/react'
 import {
-  Sparkles, Loader2, CheckCircle2, XCircle,
+  Sparkles, Loader2, CheckCircle2, AlertTriangle, RotateCcw,
   ChevronDown, FileText, Copy,
   ExternalLink,
 } from 'lucide-react'
@@ -23,6 +23,7 @@ import {
 interface Props {
   applicationId: string
   jobProfileId?: string | null
+  profileDetails?: string | null
   resume?: { id: string; title: string } | null
   initialStatus?: string | null
 }
@@ -71,7 +72,7 @@ function CloneFromProfileButton({
   )
 }
 
-export function CVActionButton({ applicationId, jobProfileId, resume, initialStatus }: Props) {
+export function CVActionButton({ applicationId, jobProfileId, profileDetails, resume, initialStatus }: Props) {
   const refetchQueries = [{ query: JOB_APPLICATION_QUERY, variables: { id: applicationId } }]
 
   const [loadDrafts, { data: draftsData, loading: draftsLoading }] = useLazyQuery(
@@ -143,19 +144,22 @@ export function CVActionButton({ applicationId, jobProfileId, resume, initialSta
   if (initialStatus === 'failed') {
     return (
       <div className="space-y-2">
-        <p className="text-xs text-destructive">Resume generation failed.</p>
+        <div className="flex items-center gap-1.5 text-xs text-destructive">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          Resume generation failed.
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="gap-1.5 text-destructive border-destructive hover:bg-destructive/10"
+            className="gap-1.5"
             disabled={generating}
             onClick={() => generateCV()}
           >
             {generating
               ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              : <XCircle className="h-3.5 w-3.5" />}
-            Retry with AI
+              : <RotateCcw className="h-3.5 w-3.5" />}
+            Retry
           </Button>
           {jobProfileId && (
             <CloneFromProfileButton
@@ -174,18 +178,25 @@ export function CVActionButton({ applicationId, jobProfileId, resume, initialSta
   // ── No resume ────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-wrap gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        disabled={generating}
-        onClick={() => generateCV()}
-      >
-        {generating
-          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          : <Sparkles className="h-3.5 w-3.5" />}
-        Generate with AI
-      </Button>
+      {profileDetails ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          disabled={generating}
+          onClick={() => generateCV()}
+        >
+          {generating
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <Sparkles className="h-3.5 w-3.5" />}
+          Generate with AI
+        </Button>
+      ) : (
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 text-yellow-500 shrink-0" />
+          Add profile details to generate a CV
+        </div>
+      )}
       {jobProfileId ? (
         <CloneFromProfileButton
           jobProfileId={jobProfileId}

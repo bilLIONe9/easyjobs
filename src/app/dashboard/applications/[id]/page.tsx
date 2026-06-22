@@ -364,6 +364,7 @@ export default function ApplicationDetailPage() {
             initialStatus={app.cvGenerationStatus}
             resume={app.resume}
             jobProfileId={app.jobProfile?.id}
+            profileDetails={app.jobProfile?.details}
           />
         </div>
 
