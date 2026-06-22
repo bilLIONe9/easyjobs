@@ -351,9 +351,12 @@ export const JOB_PROFILE_QUERY = gql`
       github
       address
       description
+      details
       isDefault
       applicationCount
       resumeDraftCount
+      createdAt
+      updatedAt
     }
   }
 `
