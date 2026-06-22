@@ -375,7 +375,7 @@ export default function ApplicationDetailPage() {
             <div className="text-sm space-y-1">
               <p className="font-medium">{app.jobProfile.name}</p>
               {app.jobProfile.linkedin && <p className="text-xs text-muted-foreground">{app.jobProfile.linkedin}</p>}
-              {app.jobProfile.location && <p className="text-xs text-muted-foreground">{app.jobProfile.location}</p>}
+              {app.jobProfile.address && <p className="text-xs text-muted-foreground">{app.jobProfile.address}</p>}
             </div>
           ) : (
             <p className="text-xs text-muted-foreground">No profile selected.</p>
@@ -442,7 +442,7 @@ export default function ApplicationDetailPage() {
             phone: app.jobProfile?.phone,
             linkedin: app.jobProfile?.linkedin,
             github: app.jobProfile?.github,
-            location: app.jobProfile?.location,
+            location: app.jobProfile?.address,
           }}
           job={{
             title: app.jobPost.title,

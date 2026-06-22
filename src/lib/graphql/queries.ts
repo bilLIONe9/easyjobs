@@ -216,7 +216,7 @@ export const JOB_APPLICATION_QUERY = gql`
         linkedin
         github
         phone
-        location
+        address
         details
       }
       resume {
@@ -349,7 +349,7 @@ export const JOB_PROFILE_QUERY = gql`
       linkedin
       phone
       github
-      location
+      address
       description
       isDefault
       applicationCount
@@ -367,7 +367,7 @@ export const JOB_PROFILES_QUERY = gql`
       linkedin
       phone
       github
-      location
+      address
       description
       details
       isDefault
@@ -466,7 +466,7 @@ export const UPDATE_JOB_PROFILE = gql`
       linkedin
       phone
       github
-      location
+      address
       description
       details
       isDefault

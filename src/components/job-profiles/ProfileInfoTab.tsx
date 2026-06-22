@@ -15,7 +15,7 @@ interface ProfileForm {
   linkedin: string
   phone: string
   github: string
-  location: string
+  address: string
   description: string
   details: string
   isDefault: boolean
@@ -33,7 +33,7 @@ export function ProfileInfoTab({ profile }: Props) {
       linkedin: profile.linkedin ?? '',
       phone: profile.phone ?? '',
       github: profile.github ?? '',
-      location: profile.location ?? '',
+      address: profile.address ?? '',
       description: profile.description ?? '',
       details: profile.details ?? '',
       isDefault: profile.isDefault ?? false,
@@ -58,7 +58,7 @@ export function ProfileInfoTab({ profile }: Props) {
           linkedin: data.linkedin || null,
           phone: data.phone || null,
           github: data.github || null,
-          location: data.location || null,
+          address: data.address || null,
           description: data.description || null,
           details: data.details || null,
         },
@@ -92,8 +92,8 @@ export function ProfileInfoTab({ profile }: Props) {
           <Input {...register('phone')} placeholder="+1 (555) 000-0000" />
         </div>
         <div className="grid gap-1.5">
-          <Label>Location</Label>
-          <Input {...register('location')} placeholder="City, Country" />
+          <Label>Address</Label>
+          <Input {...register('address')} placeholder="City, Country" />
         </div>
       </div>
       <div className="grid gap-1.5">

@@ -9,7 +9,7 @@ export interface GenerateCVProfile {
   lastName: string
   email: string
   phone?: string
-  location?: string
+  address?: string
   linkedin?: string
   github?: string
   details: string
