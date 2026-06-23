@@ -552,6 +552,68 @@ export const deleteCertification = async (
   }
 };
 
+// ─── Resume sharing ───────────────────────────────────────────────────────────
+
+export const shareResume = async (resumeId: string): Promise<any | undefined> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const owned = await prisma.resume.findUnique({ where: { id: resumeId, userId: user.id }, select: { id: true } });
+    if (!owned) throw new Error("Resume not found");
+
+    const share = await prisma.resumeShare.upsert({
+      where: { resumeId },
+      create: { resumeId },
+      update: {},
+    });
+    return { success: true, data: share };
+  } catch (error) {
+    return handleError(error, "Failed to share resume.");
+  }
+};
+
+export const unshareResume = async (resumeId: string): Promise<any | undefined> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const owned = await prisma.resume.findUnique({ where: { id: resumeId, userId: user.id }, select: { id: true } });
+    if (!owned) throw new Error("Resume not found");
+
+    await prisma.resumeShare.delete({ where: { resumeId } });
+    return { success: true };
+  } catch (error) {
+    return handleError(error, "Failed to unshare resume.");
+  }
+};
+
+export const getResumeShareStatus = async (resumeId: string): Promise<any | undefined> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const share = await prisma.resumeShare.findUnique({ where: { resumeId } });
+    return { success: true, data: share ? { shared: true, token: share.token } : { shared: false } };
+  } catch (error) {
+    return handleError(error, "Failed to get share status.");
+  }
+};
+
+export const getResumeByShareToken = async (token: string): Promise<any | undefined> => {
+  try {
+    if (!token) throw new Error("Token is required");
+    const share = await prisma.resumeShare.findUnique({
+      where: { token },
+      include: { resume: true },
+    });
+    if (!share) return { success: false, data: null };
+    return { success: true, data: share.resume };
+  } catch (error) {
+    return handleError(error, "Failed to fetch shared resume.");
+  }
+};
+
 // ─── Save full resume (local-first draft) ─────────────────────────────────────
 
 export const saveFullResume = async (resume: Resume): Promise<any | undefined> => {

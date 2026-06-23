@@ -38,7 +38,10 @@ export async function generateResumePdfBlob(
   const blob = await pdf(
     <ProfessionalResumeDocument resume={resume} htmlNodes={htmlNodes} />,
   ).toBlob();
-  const filename = `${sanitizeFilename(resume.title)}.pdf`;
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const filename = `${sanitizeFilename(resume.title)}_${mm}_${dd}.pdf`;
   return { blob, filename };
 }
 

@@ -62,8 +62,20 @@ model Resume {
   updatedAt      DateTime        @updatedAt
   Job            Job[]
   jobApplications JobApplication[]
+  share          ResumeShare?
 
   @@index([userId])
+}
+
+model ResumeShare {
+  id        String   @id @default(uuid())
+  resumeId  String   @unique
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  token     String   @unique @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
 }
 
 model Contact {
