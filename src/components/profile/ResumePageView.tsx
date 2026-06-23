@@ -21,7 +21,7 @@ import { Button } from "../ui/button";
 import { ResumePdfPanel } from "./ResumePdfPanel";
 import { ResumeEditorPanel } from "./ResumeEditorPanel";
 import { generateResumePdfBlob } from "./resume-pdf/generateResumePdf";
-import { getResumeApplications, getResumeShareStatus, shareResume, unshareResume, saveFullResume } from "@/actions/profile.actions";
+import { editResume, getResumeApplications, getResumeShareStatus, shareResume, unshareResume, saveFullResume } from "@/actions/profile.actions";
 import { toast } from "../ui/use-toast";
 import {
   DropdownMenu,
@@ -43,6 +43,38 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
 
   const [shareToken, setShareToken] = useState<string | null>(null);
   const [isSharing, startShareTransition] = useTransition();
+
+  const [titleDraft, setTitleDraft] = useState(resume.title);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+
+  const handleTitleEdit = () => {
+    setTitleDraft(localResume.title);
+    setIsEditingTitle(true);
+    setTimeout(() => titleInputRef.current?.select(), 0);
+  };
+
+  const handleTitleSave = async () => {
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === localResume.title) {
+      setTitleDraft(localResume.title);
+      setIsEditingTitle(false);
+      return;
+    }
+    setIsEditingTitle(false);
+    const res = await editResume(resume.id!, trimmed);
+    if (!res?.success) {
+      toast({ variant: "destructive", title: "Failed to rename resume." });
+      setTitleDraft(localResume.title);
+    } else {
+      setLocalResume((prev) => ({ ...prev, title: trimmed }));
+    }
+  };
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") { e.currentTarget.blur(); }
+    if (e.key === "Escape") { setTitleDraft(localResume.title); setIsEditingTitle(false); }
+  };
 
   type AppInsight = { id: string; currentStatus: string; jobPost: { title: string; postedBy: string; sourceUrl: string | null } };
   const [appInsights, setAppInsights] = useState<AppInsight[]>([]);
@@ -143,9 +175,25 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
           </Button>
         </Link>
 
-        <span className="font-semibold text-sm truncate flex-1 min-w-0">
-          {localResume.title}
-        </span>
+        {isEditingTitle ? (
+          <input
+            ref={titleInputRef}
+            value={titleDraft}
+            onChange={(e) => setTitleDraft(e.target.value)}
+            onBlur={handleTitleSave}
+            onKeyDown={handleTitleKeyDown}
+            className="font-semibold text-sm flex-1 min-w-0 bg-transparent border-b border-border outline-none px-0.5"
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={handleTitleEdit}
+            className="font-semibold text-sm truncate flex-1 min-w-0 text-left hover:opacity-70 transition-opacity"
+            title="Click to rename"
+          >
+            {localResume.title}
+          </button>
+        )}
 
         {isDirty && (
           <>
