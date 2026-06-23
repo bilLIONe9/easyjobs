@@ -62,7 +62,7 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
       const token = res.data.token as string;
       setShareToken(token);
       const url = `${window.location.origin}/cv/${token}`;
-      await navigator.clipboard.writeText(url).catch(() => {});
+      await navigator.clipboard.writeText(url).catch(() => { });
       toast({ variant: "success", description: "Public link copied to clipboard." });
     });
   };
@@ -81,7 +81,7 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
 
   const handleCopyLink = async () => {
     if (!publicUrl) return;
-    await navigator.clipboard.writeText(publicUrl).catch(() => {});
+    await navigator.clipboard.writeText(publicUrl).catch(() => { });
     toast({ description: "Link copied to clipboard." });
   };
 
@@ -185,7 +185,6 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
                 {isSharing
                   ? <Loader className="h-4 w-4 animate-spin" />
                   : <Globe className="h-4 w-4" />}
-                <span className="hidden sm:inline">Shared</span>
                 <MoreHorizontal className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
