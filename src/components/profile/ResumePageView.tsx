@@ -1,10 +1,14 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  Copy,
   Download,
+  Globe,
+  Unlink,
   Loader,
+  MoreHorizontal,
   PanelRightClose,
   PanelRightOpen,
   RotateCcw,
@@ -15,8 +19,15 @@ import { Button } from "../ui/button";
 import { ResumePdfPanel } from "./ResumePdfPanel";
 import { ResumeEditorPanel } from "./ResumeEditorPanel";
 import { generateResumePdfBlob } from "./resume-pdf/generateResumePdf";
+import { getResumeShareStatus, shareResume, unshareResume } from "@/actions/profile.actions";
 import { saveFullResume } from "@/actions/profile.actions";
 import { toast } from "../ui/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 
 interface ResumePageViewProps {
   resume: Resume;
@@ -28,6 +39,51 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSaveTransition] = useTransition();
   const savedRef = useRef<Resume>(resume);
+
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  const [isSharing, startShareTransition] = useTransition();
+
+  useEffect(() => {
+    if (!resume.id) return;
+    getResumeShareStatus(resume.id).then((res) => {
+      if (res?.success && res.data.shared) setShareToken(res.data.token);
+    });
+  }, [resume.id]);
+
+  const publicUrl = shareToken ? `${window.location.origin}/cv/${shareToken}` : null;
+
+  const handleShare = () => {
+    startShareTransition(async () => {
+      const res = await shareResume(resume.id!);
+      if (!res?.success) {
+        toast({ variant: "destructive", title: "Failed to share resume." });
+        return;
+      }
+      const token = res.data.token as string;
+      setShareToken(token);
+      const url = `${window.location.origin}/cv/${token}`;
+      await navigator.clipboard.writeText(url).catch(() => {});
+      toast({ variant: "success", description: "Public link copied to clipboard." });
+    });
+  };
+
+  const handleUnshare = () => {
+    startShareTransition(async () => {
+      const res = await unshareResume(resume.id!);
+      if (!res?.success) {
+        toast({ variant: "destructive", title: "Failed to withdraw sharing." });
+        return;
+      }
+      setShareToken(null);
+      toast({ description: "Resume is no longer publicly shared." });
+    });
+  };
+
+  const handleCopyLink = async () => {
+    if (!publicUrl) return;
+    await navigator.clipboard.writeText(publicUrl).catch(() => {});
+    toast({ description: "Link copied to clipboard." });
+  };
 
   const backHref = resume.jobProfileId ? "/dashboard/job-profiles" : "/dashboard/profile";
 
@@ -121,6 +177,46 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
           <Download className="h-4 w-4" />
           <span className="hidden sm:inline">Download</span>
         </Button>
+
+        {shareToken ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="secondary" size="sm" className="gap-1.5 shrink-0">
+                {isSharing
+                  ? <Loader className="h-4 w-4 animate-spin" />
+                  : <Globe className="h-4 w-4" />}
+                <span className="hidden sm:inline">Shared</span>
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleCopyLink}>
+                <Copy className="h-4 w-4 mr-2" />
+                Copy link
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleUnshare}
+                className="text-destructive focus:text-destructive"
+              >
+                <Unlink className="h-4 w-4 mr-2" />
+                Unshare
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 shrink-0"
+            onClick={handleShare}
+            disabled={isSharing}
+          >
+            {isSharing
+              ? <Loader className="h-4 w-4 animate-spin" />
+              : <Globe className="h-4 w-4" />}
+            <span className="hidden sm:inline">Share</span>
+          </Button>
+        )}
 
         <Button
           variant={showEdit ? "secondary" : "outline"}
