@@ -11,6 +11,7 @@ import {
   Loader2,
   CalendarIcon,
   X,
+  PanelRight,
 } from 'lucide-react'
 
 import { Input } from '@/components/ui/input'
@@ -21,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { ProfileLayoutHeader } from './ProfileLayoutHeader'
+import { JobPostsPanel } from './JobPostsPanel'
 import { JOB_APPLICATIONS_QUERY, UPDATE_APPLICATION_STATUS, DELETE_APPLICATION } from '@/lib/graphql/queries'
 
 const APPLICATION_STATUSES = [
@@ -91,6 +93,7 @@ export function ProfileApplicationsView() {
   // ── URL-based filter state ────────────────────────────────────────────────
   const urlQuery = searchParams.get('q') ?? ''
   const status = searchParams.get('status') ?? 'all'
+  const panelOpen = searchParams.get('posts') === 'true'
   const cvReady = searchParams.get('cvReady') === '1'
   const page = Math.max(1, Number(searchParams.get('page') ?? '1'))
   const datePreset = (searchParams.get('datePreset') as DatePreset | null)
@@ -147,7 +150,7 @@ export function ProfileApplicationsView() {
     // search is intentionally omitted — filtered client-side
   }
 
-  const { data, loading } = useQuery(JOB_APPLICATIONS_QUERY, {
+  const { data, loading, refetch: refetchApplications } = useQuery(JOB_APPLICATIONS_QUERY, {
     variables: { filter: serverFilter, page: 1, limit: 500 },
     fetchPolicy: 'cache-and-network',
   })
@@ -161,7 +164,7 @@ export function ProfileApplicationsView() {
 
   const allApplications: any[] = (data as any)?.jobApplications?.items ?? []
 
-  // ── Client-side search filter (title + company) ───────────────────────────
+  // ── Client-side search filter (title + company) ──────────────────────────
   const filteredApplications = useMemo(() => {
     const q = searchInput.trim().toLowerCase()
     if (!q) return allApplications
@@ -203,10 +206,29 @@ export function ProfileApplicationsView() {
     <div className="col-span-3 space-y-4">
       <ProfileLayoutHeader />
 
-      <p className="text-sm text-muted-foreground">
-        {totalFiltered} application{totalFiltered !== 1 ? 's' : ''}
-        {searchInput && ` matching "${searchInput}"`}
-      </p>
+      <div className="flex gap-4 items-start">
+        {/* ── Main content ───────────────────────────────────────────── */}
+        <div className="flex-[3] min-w-0 space-y-4">
+
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          {totalFiltered} application{totalFiltered !== 1 ? 's' : ''}
+          {searchInput && ` matching "${searchInput}"`}
+        </p>
+        <Button
+          variant={panelOpen ? 'secondary' : 'outline'}
+          size="sm"
+          className="gap-1.5 h-8 shrink-0"
+          onClick={() => {
+            const p = new URLSearchParams(searchParams.toString())
+            panelOpen ? p.delete('posts') : p.set('posts', 'true')
+            router.replace(`${pathname}?${p.toString()}`)
+          }}
+        >
+          <PanelRight className="h-3.5 w-3.5" />
+          {panelOpen ? 'Hide Jobs' : 'Browse Jobs'}
+        </Button>
+      </div>
 
       {/* ── Filter bar ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
@@ -414,6 +436,23 @@ export function ProfileApplicationsView() {
           </Button>
         </div>
       )}
+      </div>
+
+        {/* ── Right panel (3:1 ratio, sticky) ──────────────────────── */}
+        {panelOpen && (
+          <div className="flex-1 sticky top-4 self-start" style={{ height: 'calc(100vh - 7rem)' }}>
+            <JobPostsPanel
+              profileId={profileId}
+              onHide={() => {
+                const p = new URLSearchParams(searchParams.toString())
+                p.delete('posts')
+                router.replace(`${pathname}?${p.toString()}`)
+              }}
+              onSaved={() => refetchApplications()}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
