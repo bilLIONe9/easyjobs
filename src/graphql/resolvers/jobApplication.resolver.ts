@@ -297,6 +297,7 @@ export const jobApplicationResolvers = {
 
       const application = await ctx.prisma.jobApplication.findUnique({
         where: { id: args.applicationId },
+        include: { jobPost: true },
       })
       if (!application) throw new Error('Application not found')
 
@@ -342,9 +343,11 @@ export const jobApplicationResolvers = {
       }))
 
       const raw = cv.contactInfo ?? cv.ContactInfo ?? {}
+      const firstName = raw.firstName ?? raw.first_name ?? ''
+      const lastName = raw.lastName ?? raw.last_name ?? ''
       const contactInfo = {
-        firstName: raw.firstName ?? raw.first_name ?? '',
-        lastName: raw.lastName ?? raw.last_name ?? '',
+        firstName,
+        lastName,
         email: raw.email ?? '',
         phone: raw.phone ?? null,
         address: raw.address ?? null,
@@ -353,10 +356,15 @@ export const jobApplicationResolvers = {
         github: raw.github ?? null,
       }
 
+      const fullName = [firstName, lastName].filter(Boolean).join(' ')
+      const jobTitle = application.jobPost?.title ?? ''
+      const company = application.jobPost?.postedBy ?? ''
+      const resumeTitle = [fullName, jobTitle, company].filter(Boolean).join(' - ')
+
       const resume = await ctx.prisma.resume.create({
         data: {
           userId: application.userId,
-          title: cv.title ?? 'Generated Resume',
+          title: resumeTitle || 'Generated Resume',
           summary: cv.Summary ?? cv.summary ?? null,
           contactInfo,
           skills,
