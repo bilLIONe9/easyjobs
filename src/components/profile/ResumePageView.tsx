@@ -151,7 +151,7 @@ export function ResumePageView({ resume }: ResumePageViewProps) {
 
   const handleDownload = async () => {
     try {
-      const { blob, filename } = await generateResumePdfBlob(localResume);
+      const { blob, filename } = await generateResumePdfBlob(localResume, localResume.title);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;

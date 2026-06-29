@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Download, Loader } from "lucide-react";
 import { Resume } from "@/models/profile.model";
-import type { ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
+import type { ResumeDocumentData, ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
 import { Button } from "../ui/button";
 import { generateResumePdfBlob } from "./resume-pdf/generateResumePdf";
 import { toast } from "../ui/use-toast";
@@ -20,6 +20,22 @@ interface PublicResumeViewProps {
 export function PublicResumeView({ resume }: PublicResumeViewProps) {
   const [htmlNodes, setHtmlNodes] = useState<ResumeHtmlNodes | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const documentData = useMemo<ResumeDocumentData>(() => ({
+    summary: resume.summary,
+    contactInfo: resume.contactInfo,
+    skills: resume.skills,
+    experiences: resume.experiences,
+    educations: resume.educations,
+    certifications: resume.certifications,
+  }), [
+    resume.summary,
+    resume.contactInfo,
+    resume.skills,
+    resume.experiences,
+    resume.educations,
+    resume.certifications,
+  ]);
 
   const contentKey = [
     resume.summary ?? "",
@@ -47,7 +63,7 @@ export function PublicResumeView({ resume }: PublicResumeViewProps) {
   const handleDownload = async () => {
     setIsDownloading(true);
     try {
-      const { blob, filename } = await generateResumePdfBlob(resume);
+      const { blob, filename } = await generateResumePdfBlob(documentData, resume.title);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -87,7 +103,7 @@ export function PublicResumeView({ resume }: PublicResumeViewProps) {
         ) : (
           <div className="max-w-4xl mx-auto h-[calc(100vh-8rem)]">
             <div className="h-full rounded-lg border overflow-hidden shadow-sm">
-              <PdfViewerPanel resume={resume} htmlNodes={htmlNodes} />
+              <PdfViewerPanel resume={documentData} htmlNodes={htmlNodes} />
             </div>
           </div>
         )}

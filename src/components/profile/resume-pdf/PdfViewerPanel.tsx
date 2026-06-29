@@ -1,12 +1,11 @@
 "use client";
 import { memo } from "react";
 import { PDFViewer } from "@react-pdf/renderer";
-import { Resume } from "@/models/profile.model";
-import { ResumeHtmlNodes } from "./generateResumePdf";
+import { ResumeDocumentData, ResumeHtmlNodes } from "./generateResumePdf";
 import { ProfessionalResumeDocument } from "./ProfessionalTemplate";
 
 interface Props {
-  resume: Resume;
+  resume: ResumeDocumentData;
   htmlNodes: ResumeHtmlNodes;
 }
 

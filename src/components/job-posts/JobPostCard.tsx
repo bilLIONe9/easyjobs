@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { SET_JOB_POST_STATUS, DELETE_JOB_POST, JOB_POSTS_QUERY, SET_JOB_POST_TAGS, JOB_POST_TAGS_QUERY, CREATE_JOB_POST_TAG } from '@/lib/graphql/queries'
-import { SaveToApplyDialog } from './SaveToApplyDialog'
 import { format } from 'date-fns'
 import { JobPostTagInput, JobPostTagOption, getTagColor } from './JobPostTagInput'
 
@@ -35,14 +34,11 @@ interface JobPostCardProps {
     sourceUrl?: string | null
     status: string
     applicationCount: number
-    savedProfileIds: string[]
     tags?: { id: string; label: string; value: string }[]
   }
-  onSaved?: () => void
 }
 
-export function JobPostCard({ post, onSaved }: JobPostCardProps) {
-  const [dialogOpen, setDialogOpen] = useState(false)
+export function JobPostCard({ post }: JobPostCardProps) {
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
   const [localTagIds, setLocalTagIds] = useState<string[]>((post.tags ?? []).map((t) => t.id))
 
@@ -75,8 +71,7 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
   }
 
   return (
-    <>
-      <div className="flex items-start gap-3 px-4 py-3 border rounded-lg hover:bg-muted/40 transition-colors">
+    <div className="flex items-start gap-3 px-4 py-3 border rounded-lg hover:bg-muted/40 transition-colors">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <Link
@@ -105,7 +100,7 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
             )}
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {format(new Date(post.postedAt), 'MMM d, yyyy')}
+              {format(new Date(post.postedAt.slice(0, 10) + 'T00:00:00'), 'MMM d, yyyy')}
             </span>
             <span>
               {post.applicationCount > 0
@@ -167,13 +162,6 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                disabled={post.status !== 'active'}
-                onClick={() => setDialogOpen(true)}
-              >
-                Save to Apply
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               {post.status !== 'closed' && (
                 <DropdownMenuItem onClick={() => setStatus({ variables: { id: post.id, status: 'closed' } })}>
                   Mark as Closed
@@ -199,16 +187,6 @@ export function JobPostCard({ post, onSaved }: JobPostCardProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
-
-      <SaveToApplyDialog
-        jobPostId={post.id}
-        jobPostTitle={post.title}
-        savedProfileIds={post.savedProfileIds}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={onSaved}
-      />
-    </>
+    </div>
   )
 }

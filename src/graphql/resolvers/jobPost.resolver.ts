@@ -6,7 +6,7 @@ export const jobPostResolvers = {
   Query: {
     jobPosts: async (
       _: unknown,
-      args: { filter?: { status?: string; search?: string; startDate?: string; excludeProfileIds?: string[]; location?: string; tags?: string[] }; page?: number; limit?: number },
+      args: { filter?: { status?: string; search?: string; startDate?: string; createdAfter?: string; excludeProfileIds?: string[]; location?: string; tags?: string[] }; page?: number; limit?: number },
       ctx: GraphQLContext,
     ) => {
       const userId = requireAuth(ctx.userId)
@@ -25,6 +25,7 @@ export const jobPostResolvers = {
       }
       if (filter?.location) where.locations = { has: filter.location }
       if (filter?.startDate) where.postedAt = { gte: new Date(filter.startDate) }
+      if (filter?.createdAfter) where.createdAt = { gte: new Date(filter.createdAfter) }
       if (filter?.tags?.length) {
         where.tags = { some: { value: { in: filter.tags } } }
       }

@@ -84,7 +84,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
       ? {
           title: editPost.title,
           description: editPost.description,
-          postedAt: format(new Date(editPost.postedAt), 'yyyy-MM-dd'),
+          postedAt: editPost.postedAt.slice(0, 10),
           salary: editPost.salary ?? '',
           sourceUrl: editPost.sourceUrl ?? '',
           jobType: editPost.jobType ?? '',
@@ -208,7 +208,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
       title: data.title,
       description: data.description,
       postedBy: selectedCompany?.label ?? data.company,
-      postedAt: new Date(data.postedAt).toISOString(),
+      postedAt: new Date(data.postedAt + 'T00:00:00').toISOString(),
       salary: data.salary || null,
       locations: locationLabels,
       sourceUrl: data.sourceUrl || null,
@@ -252,7 +252,7 @@ export function JobPostForm({ editPost, onSuccess, onCancel }: JobPostFormProps)
               <div key={dup.id} className="flex items-start justify-between gap-2 text-sm text-amber-700">
                 <span>
                   <span className="font-medium">{dup.postedBy}</span> posted &ldquo;{dup.title}&rdquo;{' '}
-                  {formatDistanceToNow(new Date(dup.postedAt), { addSuffix: true })}
+                  {formatDistanceToNow(new Date(dup.postedAt.slice(0, 10) + 'T00:00:00'), { addSuffix: true })}
                   {dup.status !== 'active' && (
                     <span className="ml-1 text-amber-500">({dup.status})</span>
                   )}

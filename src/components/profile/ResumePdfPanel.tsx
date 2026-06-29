@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { Loader } from "lucide-react";
 import { Resume } from "@/models/profile.model";
-import type { ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
+import type { ResumeDocumentData, ResumeHtmlNodes } from "./resume-pdf/generateResumePdf";
 
 const PdfViewerPanel = dynamic(
   () => import("./resume-pdf/PdfViewerPanel").then((m) => ({ default: m.PdfViewerPanel })),
@@ -16,6 +16,23 @@ interface ResumePdfPanelProps {
 
 export function ResumePdfPanel({ resume }: ResumePdfPanelProps) {
   const [htmlNodes, setHtmlNodes] = useState<ResumeHtmlNodes | null>(null);
+
+  // Stable reference with only rendering-relevant fields — excludes title, id, createdAt, updatedAt, etc.
+  const documentData = useMemo<ResumeDocumentData>(() => ({
+    summary: resume.summary,
+    contactInfo: resume.contactInfo,
+    skills: resume.skills,
+    experiences: resume.experiences,
+    educations: resume.educations,
+    certifications: resume.certifications,
+  }), [
+    resume.summary,
+    resume.contactInfo,
+    resume.skills,
+    resume.experiences,
+    resume.educations,
+    resume.certifications,
+  ]);
 
   // Rebuild PDF nodes only when rich-text content actually changes
   const contentKey = [
@@ -51,7 +68,7 @@ export function ResumePdfPanel({ resume }: ResumePdfPanelProps) {
 
   return (
     <div className="h-full rounded-lg border overflow-hidden shadow-sm">
-      <PdfViewerPanel resume={resume} htmlNodes={htmlNodes} />
+      <PdfViewerPanel resume={documentData} htmlNodes={htmlNodes} />
     </div>
   );
 }

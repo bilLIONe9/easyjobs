@@ -1,9 +1,8 @@
 import React from "react";
 import { Document, Page, Text, View } from "@react-pdf/renderer";
 import { format } from "date-fns";
-import { Resume } from "@/models/profile.model";
 import { styles, SectionHeading } from "./primitives";
-import { ResumeHtmlNodes } from "./generateResumePdf";
+import { ResumeDocumentData, ResumeHtmlNodes } from "./generateResumePdf";
 
 function formatDate(date: Date | string | undefined | null): string {
   if (!date) return "Present";
@@ -11,7 +10,7 @@ function formatDate(date: Date | string | undefined | null): string {
 }
 
 type Props = {
-  resume: Resume;
+  resume: ResumeDocumentData;
   htmlNodes: ResumeHtmlNodes;
 };
 
@@ -34,7 +33,6 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
       author={`${contactInfo?.firstName ?? ""} ${contactInfo?.lastName ?? ""}`.trim()}
       creator="jobsync.ca"
       producer="react-pdf"
-      title={resume.title}
     >
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}

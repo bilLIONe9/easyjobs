@@ -165,7 +165,7 @@ export default function JobPostDetailPage() {
           )}
           <span className="flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5" />
-            Posted {format(new Date(post.postedAt), 'MMM d, yyyy')}
+            Posted {format(new Date(post.postedAt.slice(0, 10) + 'T00:00:00'), 'MMM d, yyyy')}
           </span>
           <span>
             {post.applicationCount > 0

@@ -1,6 +1,5 @@
 import {
   LayoutDashboard,
-  UserRound,
   Wrench,
   Newspaper,
   FolderKanban,
@@ -58,11 +57,6 @@ export const SIDEBAR_LINKS = [
     icon: IdCard,
     route: "/dashboard/job-profiles",
     label: "Job Profiles",
-  },
-  {
-    icon: UserRound,
-    route: "/dashboard/profile",
-    label: "Profile",
   },
   {
     icon: Wrench,

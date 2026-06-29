@@ -3,16 +3,16 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Download, Loader } from "lucide-react";
-import { Resume } from "@/models/profile.model";
-import { generateResumePdfBlob, sanitizeFilename } from "./generateResumePdf";
+import { ResumeDocumentData, generateResumePdfBlob, sanitizeFilename } from "./generateResumePdf";
 
 interface Props {
-  resume: Resume | null;
+  resume: ResumeDocumentData | null;
+  title: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
 
-export function ResumePdfPreviewDialog({ resume, open, onOpenChange }: Props) {
+export function ResumePdfPreviewDialog({ resume, title, open, onOpenChange }: Props) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export function ResumePdfPreviewDialog({ resume, open, onOpenChange }: Props) {
     setError(null);
     setBlobUrl(null);
 
-    generateResumePdfBlob(resume)
+    generateResumePdfBlob(resume, title)
       .then(({ blob }) => {
         url = URL.createObjectURL(blob);
         setBlobUrl(url);
@@ -36,13 +36,13 @@ export function ResumePdfPreviewDialog({ resume, open, onOpenChange }: Props) {
     return () => {
       if (url) URL.revokeObjectURL(url);
     };
-  }, [open, resume]);
+  }, [open, resume, title]);
 
   const handleDownload = () => {
-    if (!blobUrl || !resume) return;
+    if (!blobUrl) return;
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `${sanitizeFilename(resume.title)}.pdf`;
+    a.download = `${sanitizeFilename(title)}.pdf`;
     a.click();
   };
 
@@ -50,7 +50,7 @@ export function ResumePdfPreviewDialog({ resume, open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-row items-center justify-between shrink-0">
-          <DialogTitle className="truncate pr-4">{resume?.title ?? "Resume Preview"}</DialogTitle>
+          <DialogTitle className="truncate pr-4">{title || "Resume Preview"}</DialogTitle>
           {blobUrl && (
             <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={handleDownload}>
               <Download className="h-3.5 w-3.5" />

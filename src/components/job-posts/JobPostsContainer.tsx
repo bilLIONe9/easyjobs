@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -14,9 +14,13 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { JobPostCard } from './JobPostCard'
-import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY, JOB_PROFILES_QUERY, JOB_POST_TAGS_QUERY } from '@/lib/graphql/queries'
-import { getAllJobLocations } from '@/actions/jobLocation.actions'
+import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY } from '@/lib/graphql/queries'
 import { getTagColor } from './JobPostTagInput'
+
+interface JobPostsContainerProps {
+  initialLocations: { id: string; label: string }[]
+  initialTags: { id: string; label: string; value: string }[]
+}
 
 const DATE_PRESETS = [
   { value: '1d', label: '1 day' },
@@ -26,19 +30,17 @@ const DATE_PRESETS = [
 
 type DatePreset = typeof DATE_PRESETS[number]['value'] | 'custom' | null
 
-const APP_TZ_OFFSET_HOURS = 8
-const APP_TZ_OFFSET_MS = APP_TZ_OFFSET_HOURS * 60 * 60 * 1000
-
 function appTZMidnightDaysAgo(daysAgo: number): Date {
-  const now = new Date()
-  const localNow = new Date(now.getTime() - APP_TZ_OFFSET_MS)
-  localNow.setUTCHours(0, 0, 0, 0)
-  localNow.setUTCDate(localNow.getUTCDate() - daysAgo)
-  return new Date(localNow.getTime() + APP_TZ_OFFSET_MS)
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - daysAgo)
+  return d
 }
 
 function appTZStartOfCalendarDay(date: Date): Date {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), APP_TZ_OFFSET_HOURS, 0, 0, 0))
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 function getDateFilter(preset: DatePreset, customStart: Date | undefined): { startDate?: string } {
@@ -49,30 +51,17 @@ function getDateFilter(preset: DatePreset, customStart: Date | undefined): { sta
   return {}
 }
 
-export function JobPostsContainer() {
+export function JobPostsContainer({ initialLocations, initialTags }: JobPostsContainerProps) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
   const [datePreset, setDatePreset] = useState<DatePreset>(null)
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined)
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
-  const [excludeProfileIds, setExcludeProfileIds] = useState<string[]>([])
-  const [profilePopoverOpen, setProfilePopoverOpen] = useState(false)
-
-  // Location filter
   const [locationFilter, setLocationFilter] = useState<string | null>(null)
-  const [locationOptions, setLocationOptions] = useState<{ id: string; label: string }[]>([])
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
-
-  // Tag filter
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
-
-  useEffect(() => {
-    getAllJobLocations().then((res) => {
-      if (Array.isArray(res)) setLocationOptions(res)
-    })
-  }, [])
 
   const dateFilter = getDateFilter(datePreset, customStartDate)
 
@@ -80,34 +69,21 @@ export function JobPostsContainer() {
     ...(search ? { search } : {}),
     ...(status !== 'all' ? { status } : {}),
     ...dateFilter,
-    ...(excludeProfileIds.length ? { excludeProfileIds } : {}),
     ...(locationFilter ? { location: locationFilter } : {}),
     ...(tagFilter.length ? { tags: tagFilter } : {}),
   }
 
-  const { data: tagsQueryData } = useQuery(JOB_POST_TAGS_QUERY)
-  const allTags: { id: string; label: string; value: string }[] = (tagsQueryData as any)?.jobPostTags ?? []
-
-  const { data, loading, refetch } = useQuery(JOB_POSTS_QUERY, {
+  const { data, loading } = useQuery(JOB_POSTS_QUERY, {
     variables: { filter, page, limit: 20 },
     fetchPolicy: 'cache-and-network',
   })
 
   const { data: insightsData } = useQuery(JOB_POST_INSIGHTS_QUERY)
-  const { data: profilesData } = useQuery(JOB_PROFILES_QUERY)
-  const profiles: Array<{ id: string; name: string }> = (profilesData as any)?.jobProfiles ?? []
   const d = data as any
   const insights = (insightsData as any)?.jobPostInsights
 
   const posts = d?.jobPosts?.items ?? []
   const totalPages = d?.jobPosts?.totalPages ?? 1
-
-  function toggleExcludeProfile(id: string) {
-    setExcludeProfileIds((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    )
-    setPage(1)
-  }
 
   function handlePresetClick(preset: DatePreset) {
     if (datePreset === preset) {
@@ -146,7 +122,7 @@ export function JobPostsContainer() {
           <h1 className="text-2xl font-bold">Job Posts</h1>
           {insights && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              {insights.active} active · {insights.closed} closed · {insights.savedToApply} saved to apply
+              {insights.active} active · {insights.closed} closed
             </p>
           )}
         </div>
@@ -183,7 +159,7 @@ export function JobPostsContainer() {
         </Select>
 
         {/* Location filter */}
-        {locationOptions.length > 0 && (
+        {initialLocations.length > 0 && (
           <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -205,7 +181,7 @@ export function JobPostsContainer() {
                 <CommandList>
                   <CommandEmpty>No locations found.</CommandEmpty>
                   <CommandGroup>
-                    {locationOptions.map((loc) => (
+                    {initialLocations.map((loc) => (
                       <CommandItem
                         key={loc.id}
                         value={loc.label}
@@ -229,7 +205,7 @@ export function JobPostsContainer() {
         )}
 
         {/* Tag filter */}
-        {allTags.length > 0 && (
+        {initialTags.length > 0 && (
           <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -251,7 +227,7 @@ export function JobPostsContainer() {
                 <CommandList>
                   <CommandEmpty>No tags found.</CommandEmpty>
                   <CommandGroup>
-                    {allTags.map((tag) => (
+                    {initialTags.map((tag) => (
                       <CommandItem
                         key={tag.id}
                         value={tag.value}
@@ -282,62 +258,6 @@ export function JobPostsContainer() {
                     size="sm"
                     className="w-full h-7 text-xs text-muted-foreground"
                     onClick={() => { setTagFilter([]); setPage(1) }}
-                  >
-                    Clear selection
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
-        )}
-
-        {/* Exclude by profile */}
-        {profiles.length > 0 && (
-          <Popover open={profilePopoverOpen} onOpenChange={setProfilePopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant={excludeProfileIds.length ? 'secondary' : 'outline'}
-                size="sm"
-                className="gap-1.5 h-9"
-                role="combobox"
-              >
-                {excludeProfileIds.length
-                  ? `Exclude ${excludeProfileIds.length} profile${excludeProfileIds.length > 1 ? 's' : ''}`
-                  : 'Exclude by profile'}
-                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-56 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search profiles..." />
-                <CommandList>
-                  <CommandEmpty>No profiles found.</CommandEmpty>
-                  <CommandGroup>
-                    {profiles.map((profile) => (
-                      <CommandItem
-                        key={profile.id}
-                        value={profile.name}
-                        onSelect={() => toggleExcludeProfile(profile.id)}
-                      >
-                        <Check
-                          className={cn(
-                            'mr-2 h-4 w-4',
-                            excludeProfileIds.includes(profile.id) ? 'opacity-100' : 'opacity-0',
-                          )}
-                        />
-                        {profile.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-              {excludeProfileIds.length > 0 && (
-                <div className="border-t p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full h-7 text-xs text-muted-foreground"
-                    onClick={() => { setExcludeProfileIds([]); setPage(1) }}
                   >
                     Clear selection
                   </Button>
@@ -413,7 +333,7 @@ export function JobPostsContainer() {
       ) : (
         <div className="flex flex-col gap-1.5">
           {posts.map((post: any) => (
-            <JobPostCard key={post.id} post={post} onSaved={() => refetch()} />
+            <JobPostCard key={post.id} post={post} />
           ))}
         </div>
       )}

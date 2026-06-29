@@ -35,7 +35,7 @@ async function Header() {
                 className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-primary text-lg font-semibold text-primary-foreground md:text-base"
               >
                 <Briefcase className="h-5 w-5 transition-all group-hover:scale-110" />
-                <span className="sr-only">JobSync</span>
+                <span className="sr-only">EasyJobs</span>
               </Link>
             </SheetClose>
             {SIDEBAR_LINKS.map((item) => {
@@ -58,7 +58,7 @@ async function Header() {
           </nav>
         </SheetContent>
       </Sheet>
-      <h1 className="font-semibold">JobSync - Job Search Assistant</h1>
+      <h1 className="font-semibold">EasyJobs</h1>
       <div className="relative ml-auto flex-1 md:grow-0">
         {/* <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
