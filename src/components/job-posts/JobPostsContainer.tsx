@@ -30,19 +30,17 @@ const DATE_PRESETS = [
 
 type DatePreset = typeof DATE_PRESETS[number]['value'] | 'custom' | null
 
-const APP_TZ_OFFSET_HOURS = 8
-const APP_TZ_OFFSET_MS = APP_TZ_OFFSET_HOURS * 60 * 60 * 1000
-
 function appTZMidnightDaysAgo(daysAgo: number): Date {
-  const now = new Date()
-  const localNow = new Date(now.getTime() - APP_TZ_OFFSET_MS)
-  localNow.setUTCHours(0, 0, 0, 0)
-  localNow.setUTCDate(localNow.getUTCDate() - daysAgo)
-  return new Date(localNow.getTime() + APP_TZ_OFFSET_MS)
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - daysAgo)
+  return d
 }
 
 function appTZStartOfCalendarDay(date: Date): Date {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), APP_TZ_OFFSET_HOURS, 0, 0, 0))
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 function getDateFilter(preset: DatePreset, customStart: Date | undefined): { startDate?: string } {

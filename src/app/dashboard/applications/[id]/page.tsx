@@ -63,7 +63,7 @@ export default async function ApplicationDetailPage({
               )}
               <span className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                Posted {format(new Date(app.jobPost.postedAt), 'MMM d, yyyy')}
+                Posted {format(new Date(app.jobPost.postedAt.slice(0, 10) + 'T00:00:00'), 'MMM d, yyyy')}
               </span>
               {app.jobPost.sourceUrl && (
                 <a

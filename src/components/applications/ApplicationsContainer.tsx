@@ -51,28 +51,17 @@ function formatLabel(s: string) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-// Fixed GMT-8 offset. Change APP_TZ_OFFSET_HOURS to adjust the system timezone.
-const APP_TZ_OFFSET_HOURS = 8
-const APP_TZ_OFFSET_MS = APP_TZ_OFFSET_HOURS * 60 * 60 * 1000
-
-// Returns UTC equivalent of midnight on (today - daysAgo) in the app timezone.
-// e.g. daysAgo=1 → 00:00:00 yesterday GMT-8 expressed as UTC
 function appTZMidnightDaysAgo(daysAgo: number): Date {
-  const now = new Date()
-  // Shift current UTC time to get "local clock" in app TZ
-  const localNow = new Date(now.getTime() - APP_TZ_OFFSET_MS)
-  // Zero to midnight of that local day
-  localNow.setUTCHours(0, 0, 0, 0)
-  // Step back N days
-  localNow.setUTCDate(localNow.getUTCDate() - daysAgo)
-  // Shift back to true UTC
-  return new Date(localNow.getTime() + APP_TZ_OFFSET_MS)
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - daysAgo)
+  return d
 }
 
-// Returns UTC equivalent of midnight on the calendar-selected date in the app timezone.
-// Calendar gives a local-timezone Date; we care only about its y/m/d.
 function appTZStartOfCalendarDay(date: Date): Date {
-  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), APP_TZ_OFFSET_HOURS, 0, 0, 0))
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
 }
 
 function getDateRangeFromPreset(preset: DatePreset, customStart: Date | undefined): { startDate?: string } {

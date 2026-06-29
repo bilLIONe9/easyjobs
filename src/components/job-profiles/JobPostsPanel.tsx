@@ -427,7 +427,7 @@ function PostRow({ post, isNew, checked, onCheck, onSave, onDismissNew, saving }
           <p className="text-xs text-muted-foreground truncate">{post.locations.join(' · ')}</p>
         )}
         <p className="text-xs text-muted-foreground mt-0.5">
-          {formatDistanceToNow(new Date(post.postedAt), { addSuffix: true })}
+          {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
         </p>
       </div>
 

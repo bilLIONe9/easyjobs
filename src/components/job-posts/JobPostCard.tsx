@@ -100,7 +100,7 @@ export function JobPostCard({ post }: JobPostCardProps) {
             )}
             <span className="flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              {format(new Date(post.postedAt), 'MMM d, yyyy')}
+              {format(new Date(post.postedAt.slice(0, 10) + 'T00:00:00'), 'MMM d, yyyy')}
             </span>
             <span>
               {post.applicationCount > 0

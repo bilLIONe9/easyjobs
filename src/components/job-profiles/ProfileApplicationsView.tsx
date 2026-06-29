@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, useRouter, usePathname } from 'next/navigation'
 import { useQuery, useMutation } from '@apollo/client/react'
 import Link from 'next/link'
-import { format, parseISO } from 'date-fns'
+import { format } from 'date-fns'
 import {
   Search,
   MapPin,
@@ -56,26 +56,19 @@ type DatePreset = typeof DATE_PRESETS[number]['value'] | 'custom'
 
 const PAGE_SIZE = 20
 
-const APP_TZ_OFFSET_HOURS = 8
-const APP_TZ_OFFSET_MS = APP_TZ_OFFSET_HOURS * 60 * 60 * 1000
-
-function appTZMidnightDaysAgo(daysAgo: number): Date {
-  const now = new Date()
-  const localNow = new Date(now.getTime() - APP_TZ_OFFSET_MS)
-  localNow.setUTCHours(0, 0, 0, 0)
-  localNow.setUTCDate(localNow.getUTCDate() - daysAgo)
-  return new Date(localNow.getTime() + APP_TZ_OFFSET_MS)
+function localMidnightDaysAgo(daysAgo: number): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() - daysAgo)
+  return d
 }
 
 function startDateFromPreset(preset: DatePreset, fromDate: string | null): string | undefined {
-  if (preset === '1d') return appTZMidnightDaysAgo(1).toISOString()
-  if (preset === '3d') return appTZMidnightDaysAgo(3).toISOString()
-  if (preset === '1w') return appTZMidnightDaysAgo(7).toISOString()
+  if (preset === '1d') return localMidnightDaysAgo(1).toISOString()
+  if (preset === '3d') return localMidnightDaysAgo(3).toISOString()
+  if (preset === '1w') return localMidnightDaysAgo(7).toISOString()
   if (preset === 'custom' && fromDate) {
-    const d = parseISO(fromDate)
-    return new Date(
-      Date.UTC(d.getFullYear(), d.getMonth(), d.getDate(), APP_TZ_OFFSET_HOURS, 0, 0, 0),
-    ).toISOString()
+    return new Date(fromDate + 'T00:00:00').toISOString()
   }
   return undefined
 }
@@ -188,7 +181,7 @@ export function ProfileApplicationsView() {
   const dateLabel = (() => {
     if (!datePreset) return null
     if (datePreset !== 'custom') return DATE_PRESETS.find((p) => p.value === datePreset)?.label
-    if (fromDate) return `From ${format(parseISO(fromDate), 'MMM d')}`
+    if (fromDate) return `From ${format(new Date(fromDate + 'T00:00:00'), 'MMM d')}`
     return 'Custom'
   })()
 
@@ -200,7 +193,7 @@ export function ProfileApplicationsView() {
     setParams({ datePreset: 'custom', fromDate: `${yyyy}-${mm}-${dd}` })
   }
 
-  const customCalendarValue = fromDate ? parseISO(fromDate) : undefined
+  const customCalendarValue = fromDate ? new Date(fromDate + 'T00:00:00') : undefined
 
   return (
     <div className="col-span-3 space-y-4">
