@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@apollo/client/react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -14,9 +14,13 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { JobPostCard } from './JobPostCard'
-import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY, JOB_POST_TAGS_QUERY } from '@/lib/graphql/queries'
-import { getAllJobLocations } from '@/actions/jobLocation.actions'
+import { JOB_POSTS_QUERY, JOB_POST_INSIGHTS_QUERY } from '@/lib/graphql/queries'
 import { getTagColor } from './JobPostTagInput'
+
+interface JobPostsContainerProps {
+  initialLocations: { id: string; label: string }[]
+  initialTags: { id: string; label: string; value: string }[]
+}
 
 const DATE_PRESETS = [
   { value: '1d', label: '1 day' },
@@ -49,27 +53,17 @@ function getDateFilter(preset: DatePreset, customStart: Date | undefined): { sta
   return {}
 }
 
-export function JobPostsContainer() {
+export function JobPostsContainer({ initialLocations, initialTags }: JobPostsContainerProps) {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('all')
   const [page, setPage] = useState(1)
   const [datePreset, setDatePreset] = useState<DatePreset>(null)
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(undefined)
   const [datePopoverOpen, setDatePopoverOpen] = useState(false)
-  // Location filter
   const [locationFilter, setLocationFilter] = useState<string | null>(null)
-  const [locationOptions, setLocationOptions] = useState<{ id: string; label: string }[]>([])
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
-
-  // Tag filter
   const [tagFilter, setTagFilter] = useState<string[]>([])
   const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
-
-  useEffect(() => {
-    getAllJobLocations().then((res) => {
-      if (Array.isArray(res)) setLocationOptions(res)
-    })
-  }, [])
 
   const dateFilter = getDateFilter(datePreset, customStartDate)
 
@@ -80,9 +74,6 @@ export function JobPostsContainer() {
     ...(locationFilter ? { location: locationFilter } : {}),
     ...(tagFilter.length ? { tags: tagFilter } : {}),
   }
-
-  const { data: tagsQueryData } = useQuery(JOB_POST_TAGS_QUERY)
-  const allTags: { id: string; label: string; value: string }[] = (tagsQueryData as any)?.jobPostTags ?? []
 
   const { data, loading } = useQuery(JOB_POSTS_QUERY, {
     variables: { filter, page, limit: 20 },
@@ -170,7 +161,7 @@ export function JobPostsContainer() {
         </Select>
 
         {/* Location filter */}
-        {locationOptions.length > 0 && (
+        {initialLocations.length > 0 && (
           <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -192,7 +183,7 @@ export function JobPostsContainer() {
                 <CommandList>
                   <CommandEmpty>No locations found.</CommandEmpty>
                   <CommandGroup>
-                    {locationOptions.map((loc) => (
+                    {initialLocations.map((loc) => (
                       <CommandItem
                         key={loc.id}
                         value={loc.label}
@@ -216,7 +207,7 @@ export function JobPostsContainer() {
         )}
 
         {/* Tag filter */}
-        {allTags.length > 0 && (
+        {initialTags.length > 0 && (
           <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -238,7 +229,7 @@ export function JobPostsContainer() {
                 <CommandList>
                   <CommandEmpty>No tags found.</CommandEmpty>
                   <CommandGroup>
-                    {allTags.map((tag) => (
+                    {initialTags.map((tag) => (
                       <CommandItem
                         key={tag.id}
                         value={tag.value}
