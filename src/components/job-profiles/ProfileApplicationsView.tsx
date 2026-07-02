@@ -77,7 +77,7 @@ function formatLabel(s: string) {
   return s.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-export function ProfileApplicationsView() {
+export function ProfileApplicationsView({ initialLocations = [] }: { initialLocations?: string[] }) {
   const { id: profileId } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -436,6 +436,7 @@ export function ProfileApplicationsView() {
           <div className="flex-1 sticky top-4 self-start" style={{ height: 'calc(100vh - 7rem)' }}>
             <JobPostsPanel
               profileId={profileId}
+              initialLocations={initialLocations}
               onHide={() => {
                 const p = new URLSearchParams(searchParams.toString())
                 p.delete('posts')

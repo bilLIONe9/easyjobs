@@ -74,6 +74,7 @@ export const jobPostTypeDefs = /* GraphQL */ `
     createdAfter: String
     excludeProfileIds: [ID]
     location: String
+    locations: [String!]
     tags: [String!]
   }
 
