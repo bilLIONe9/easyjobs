@@ -1,12 +1,12 @@
-import { StyleSheet, Text, View } from "@react-pdf/renderer";
+import { StyleSheet, Text, View, ViewProps } from "@react-pdf/renderer";
 
 export const styles = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
-    fontSize: 11,
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingHorizontal: 48,
+    fontSize: 9,
+    paddingTop: 30,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
     color: "#000000",
     lineHeight: 1.4,
   },
@@ -65,9 +65,9 @@ export const styles = StyleSheet.create({
   },
 });
 
-export function SectionHeading({ title }: { title: string }) {
+export function SectionHeading({ title, ...viewProps }: { title: string } & ViewProps) {
   return (
-    <View>
+    <View {...viewProps}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <View style={styles.divider} />
     </View>

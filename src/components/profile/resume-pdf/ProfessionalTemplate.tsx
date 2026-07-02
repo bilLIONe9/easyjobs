@@ -39,19 +39,23 @@ export function ProfessionalResumeDocument({ resume, htmlNodes }: Props) {
       <Page size="A4" style={styles.page} wrap>
         {/* Header */}
         {contactInfo && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={styles.heading}>
-              {contactInfo.firstName} {contactInfo.lastName}
-            </Text>
-            {contactInfo.headline ? (
-              <Text style={styles.subheading}>{contactInfo.headline}</Text>
-            ) : null}
-            {contactParts.length > 0 ? (
-              <Text style={styles.contactLine}>{contactParts.join(" · ")}</Text>
-            ) : null}
-            {linkParts.length > 0 ? (
-              <Text style={styles.contactLine}>{linkParts.join(" · ")}</Text>
-            ) : null}
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+            <View>
+              <Text style={styles.heading}>
+                {contactInfo.firstName} {contactInfo.lastName}
+              </Text>
+              {contactInfo.headline ? (
+                <Text style={styles.subheading}>{contactInfo.headline}</Text>
+              ) : null}
+            </View>
+            <View style={{ alignItems: "flex-end" }}>
+              {contactParts.map((part, i) => (
+                <Text key={i} style={styles.contactLine}>{part}</Text>
+              ))}
+              {linkParts.map((part, i) => (
+                <Text key={i} style={styles.contactLine}>{part}</Text>
+              ))}
+            </View>
           </View>
         )}
 
