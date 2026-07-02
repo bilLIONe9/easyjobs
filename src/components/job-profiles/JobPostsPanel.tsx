@@ -3,14 +3,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useMutation, useApolloClient } from '@apollo/client/react'
 import { formatDistanceToNow } from 'date-fns'
 import Link from 'next/link'
-import { Search, RefreshCw, X, Clock, Sparkles, MapPin } from 'lucide-react'
+import { Search, RefreshCw, X, Clock, Sparkles, MapPin, Check, ChevronsUpDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { toast } from '@/components/ui/use-toast'
+import { cn } from '@/lib/utils'
 import { JOB_POSTS_QUERY, SAVE_JOB_POST_TO_APPLY, JOB_APPLICATIONS_QUERY } from '@/lib/graphql/queries'
 
 /** Background poll interval in milliseconds. */
@@ -28,21 +30,25 @@ interface Post {
 
 interface JobPostsPanelProps {
   profileId: string
+  initialLocations: string[]
   onHide: () => void
   onSaved: () => void
 }
 
-export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps) {
+export function JobPostsPanel({ profileId, initialLocations, onHide, onSaved }: JobPostsPanelProps) {
   const apolloClient = useApolloClient()
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [location, setLocation] = useState('all')
+  const [locationFilter, setLocationFilter] = useState<string[]>([])
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [checked, setChecked] = useState<Set<string>>(new Set())
 
   // New-jobs tracking (discovered in background polls)
   const [newPosts, setNewPosts] = useState<Post[]>([])
+  // IDs of posts discovered via background poll — persists through manual refresh
+  const [newPostIds, setNewPostIds] = useState<Set<string>>(new Set())
   const [dismissedNewIds, setDismissedNewIds] = useState<Set<string>>(new Set())
   const lastPollTimeRef = useRef<Date>(new Date())
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date())
@@ -57,14 +63,14 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
     return () => clearTimeout(t)
   }, [search])
 
-  useEffect(() => { setPage(1) }, [location])
+  useEffect(() => { setPage(1) }, [locationFilter])
 
   // Main query — excludes jobs already saved to this profile
   const baseFilter = {
     status: 'active',
     excludeProfileIds: [profileId],
     ...(debouncedSearch ? { search: debouncedSearch } : {}),
-    ...(location !== 'all' ? { location } : {}),
+    ...(locationFilter.length ? { locations: locationFilter } : {}),
   }
 
   const { data, loading, refetch } = useQuery(JOB_POSTS_QUERY, {
@@ -89,20 +95,7 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
   const posts: Post[] = useMemo(() => (data as any)?.jobPosts?.items ?? [], [data])
   const totalPages = (data as any)?.jobPosts?.totalPages ?? 1
 
-  // Accumulate locations across all pages/filters so the select is always populated
-  const [seenLocations, setSeenLocations] = useState<Set<string>>(new Set())
-  useEffect(() => {
-    const incoming = posts.flatMap((p) => p.locations ?? [])
-    if (incoming.length === 0) return
-    setSeenLocations((prev) => {
-      const next = new Set(prev)
-      let changed = false
-      for (const loc of incoming) { if (!next.has(loc)) { next.add(loc); changed = true } }
-      return changed ? next : prev
-    })
-  }, [posts])
-
-  // Background poll — fetches only jobs created after the last poll time
+  // Background poll — fetches only jobs created after the last poll time, respecting active location filter
   const poll = useCallback(async () => {
     setPollLoading(true)
     try {
@@ -113,6 +106,7 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
             status: 'active',
             excludeProfileIds: [profileId],
             createdAfter: lastPollTimeRef.current.toISOString(),
+            ...(locationFilter.length ? { locations: locationFilter } : {}),
           },
           page: 1,
           limit: 50,
@@ -124,14 +118,22 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
         setNewPosts((prev) => {
           const existingIds = new Set([...prev.map((p) => p.id), ...posts.map((p) => p.id)])
           const trulyNew = incoming.filter((p) => !existingIds.has(p.id))
-          return trulyNew.length > 0 ? [...trulyNew, ...prev] : prev
+          if (trulyNew.length > 0) {
+            setNewPostIds((ids) => {
+              const next = new Set(ids)
+              trulyNew.forEach((p) => next.add(p.id))
+              return next
+            })
+            return [...trulyNew, ...prev]
+          }
+          return prev
         })
       }
       lastPollTimeRef.current = new Date()
     } finally {
       setPollLoading(false)
     }
-  }, [apolloClient, profileId, posts])
+  }, [apolloClient, profileId, posts, locationFilter])
 
   useEffect(() => {
     const interval = setInterval(poll, POLL_INTERVAL_MS)
@@ -142,7 +144,7 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
     setDismissedNewIds((prev) => new Set([...prev, id]))
   }
 
-  // Manual refresh — clears new posts, refetches main query
+  // Manual refresh — moves new posts to main query, keeps newPostIds so badges persist
   function handleRefetch() {
     setNewPosts([])
     setDismissedNewIds(new Set())
@@ -182,6 +184,9 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
     try {
       await saveToApply({ variables: { jobPostId: postId, profileId } })
       setChecked((prev) => { const next = new Set(prev); next.delete(postId); return next })
+      // Remove from new-posts list so it disappears from panel immediately
+      setNewPosts((prev) => prev.filter((p) => p.id !== postId))
+      setNewPostIds((prev) => { const next = new Set(prev); next.delete(postId); return next })
       onSaved()
       toast({ variant: 'success', description: 'Job saved to this profile.' })
     } catch (e: any) {
@@ -194,14 +199,17 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
   async function saveBulk() {
     const ids = [...checked]
     setSaving(true)
-    let saved = 0
+    const savedIds = new Set<string>()
     for (const id of ids) {
       try {
         await saveToApply({ variables: { jobPostId: id, profileId } })
-        saved++
+        savedIds.add(id)
       } catch {}
     }
+    const saved = savedIds.size
     setChecked(new Set())
+    setNewPosts((prev) => prev.filter((p) => !savedIds.has(p.id)))
+    setNewPostIds((prev) => { const next = new Set(prev); savedIds.forEach((id) => next.delete(id)); return next })
     onSaved()
     setSaving(false)
     toast({ variant: 'success', description: `${saved} job${saved !== 1 ? 's' : ''} saved.` })
@@ -264,21 +272,80 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
         </div>
       </div>
 
-      {/* ── Location filter ─────────────────────────────────────────────── */}
-      {seenLocations.size > 0 && (
+      {/* ── Location multi-select filter ─────────────────────────────────── */}
+      {initialLocations.length > 0 && (
         <div className="px-3 py-1.5 border-b shrink-0">
-          <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger className="h-7 text-xs w-full">
-              <MapPin className="h-3 w-3 mr-1 text-muted-foreground shrink-0" />
-              <SelectValue placeholder="All locations" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              {[...seenLocations].sort().map((loc) => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant={locationFilter.length ? 'secondary' : 'outline'}
+                size="sm"
+                className="h-7 text-xs w-full justify-between"
+                role="combobox"
+              >
+                <span className="flex items-center gap-1 min-w-0">
+                  <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate">
+                    {locationFilter.length === 0
+                      ? 'All locations'
+                      : locationFilter.length === 1
+                        ? locationFilter[0]
+                        : `${locationFilter.length} locations`}
+                  </span>
+                </span>
+                <span className="flex items-center gap-1 shrink-0">
+                  {locationFilter.length > 0 && (
+                    <X
+                      className="h-3 w-3 opacity-60 hover:opacity-100"
+                      onClick={(e) => { e.stopPropagation(); setLocationFilter([]); setPage(1) }}
+                    />
+                  )}
+                  <ChevronsUpDown className="h-3 w-3 opacity-50" />
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search locations…" className="h-8 text-xs" />
+                <CommandList>
+                  <CommandEmpty className="text-xs py-2 text-center text-muted-foreground">
+                    No locations found.
+                  </CommandEmpty>
+                  <CommandGroup>
+                    {initialLocations.map((loc) => (
+                      <CommandItem
+                        key={loc}
+                        value={loc}
+                        onSelect={() => {
+                          setLocationFilter((prev) =>
+                            prev.includes(loc) ? prev.filter((l) => l !== loc) : [...prev, loc]
+                          )
+                          setPage(1)
+                        }}
+                      >
+                        <Check
+                          className={cn('mr-2 h-3.5 w-3.5', locationFilter.includes(loc) ? 'opacity-100' : 'opacity-0')}
+                        />
+                        <span className="text-xs">{loc}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+                {locationFilter.length > 0 && (
+                  <div className="border-t p-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full h-6 text-xs text-muted-foreground"
+                      onClick={() => { setLocationFilter([]); setPage(1) }}
+                    >
+                      Clear selection
+                    </Button>
+                  </div>
+                )}
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       )}
 
@@ -324,7 +391,7 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
           </div>
         ) : (
           <div className="divide-y">
-            {/* New jobs shown first */}
+            {/* New jobs shown first (from background poll, not yet in main query) */}
             {newPosts.map((post) => (
               <PostRow
                 key={post.id}
@@ -337,16 +404,16 @@ export function JobPostsPanel({ profileId, onHide, onSaved }: JobPostsPanelProps
                 saving={saving}
               />
             ))}
-            {/* Main paginated list */}
+            {/* Main paginated list — show New badge if discovered via background poll */}
             {posts.map((post) => (
               <PostRow
                 key={post.id}
                 post={post}
-                isNew={false}
+                isNew={newPostIds.has(post.id) && !dismissedNewIds.has(post.id)}
                 checked={checked.has(post.id)}
                 onCheck={() => toggleCheck(post.id)}
                 onSave={() => saveOne(post.id)}
-                onDismissNew={() => {}}
+                onDismissNew={() => dismissNew(post.id)}
                 saving={saving}
               />
             ))}

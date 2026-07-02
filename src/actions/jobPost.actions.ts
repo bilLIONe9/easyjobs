@@ -15,3 +15,18 @@ export const getJobPostTags = async (): Promise<
     return undefined;
   }
 };
+
+export const getJobPostUniqueLocations = async (): Promise<string[]> => {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return [];
+    const posts = await prisma.jobPost.findMany({
+      where: { userId: user.id, status: 'active' },
+      select: { locations: true },
+    });
+    const all = posts.flatMap((p) => p.locations);
+    return [...new Set(all)].sort();
+  } catch {
+    return [];
+  }
+};
